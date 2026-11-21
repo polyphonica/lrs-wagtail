@@ -48,8 +48,8 @@ h3 { font-size: 1.3rem; }
 /* Header and navigation */
 .site-header { background: var(--surface); border-bottom: 1px solid var(--rule); position: sticky; top: 0; z-index: 5; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4.5rem; flex-wrap: wrap; }
-.brand img { height: 3.25rem; width: auto; }
-@media (prefers-color-scheme: dark) { .brand img { background: #fff; border-radius: 6px; padding: 2px 6px; } }
+.brand { font-family: var(--serif); font-size: clamp(1.2rem, 2.6vw, 1.5rem); font-weight: 600; line-height: 1.1; color: var(--accent); text-decoration: none; letter-spacing: -0.01em; padding-block: 0.6rem; }
+.brand span { white-space: nowrap; }
 .site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
 .site-nav a, .linklike { color: var(--ink); text-decoration: none; font: inherit; font-size: 0.975rem; padding: 0.4rem 0; border: 0; background: none; cursor: pointer; }
 .site-nav a:hover, .linklike:hover { color: var(--accent); }
@@ -70,6 +70,7 @@ h3 { font-size: 1.3rem; }
 .has-image { color: #fff; }
 .hero-text, .page-header-text { position: relative; z-index: 1; padding-block: clamp(3rem, 12vw, 9rem) clamp(2rem, 6vw, 4rem); }
 .hero .lead, .page-header .lead { color: inherit; opacity: 0.92; }
+.hero-quote { font-family: var(--serif); font-style: italic; font-size: clamp(1.15rem, 2.4vw, 1.4rem); margin: 0; opacity: 0.92; }
 .page-header-text { padding-block: clamp(2.5rem, 8vw, 5rem) clamp(1.5rem, 4vw, 2.5rem); }
 
 /* Concert listings */
@@ -127,6 +128,14 @@ h3 { font-size: 1.3rem; }
 figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .gallery-grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); }
 .gallery-grid img { border-radius: 6px; aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
+.image-text { display: grid; gap: var(--gap); align-items: center; margin: 2rem 0; }
+.image-text img { border-radius: var(--radius); width: 100%; }
+@media (min-width: 50rem) {
+  /* Wider than the text column, like the old homepage: picture and text side by side. */
+  .image-text { --w: min(calc(var(--wrap) - 2 * var(--gap)), calc(100vw - 4rem)); width: var(--w); margin-inline: calc((100% - var(--w)) / 2); grid-template-columns: 1fr 1fr; }
+  .image-text.image-right figure { order: 2; }
+}
+.image-text figure { margin: 0; }
 .audio { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.25rem; }
 .audio figcaption { margin: 0 0 0.75rem; display: grid; color: var(--ink); font-size: 1rem; }
 .audio figcaption span { color: var(--ink-soft); font-size: 0.9rem; }
@@ -161,11 +170,11 @@ figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .doc-group { margin-bottom: 2.5rem; }
 
 /* Gallery */
-.gallery { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }
-.gallery figure { margin: 0; }
-.gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--rule); }
-.gallery a:hover img { opacity: 0.9; }
-.gallery figcaption { font-size: 0.925rem; color: var(--ink-soft); margin-top: 0.45rem; }
+.photo-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }
+.photo-grid figure { margin: 0; }
+.photo-grid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--rule); }
+.photo-grid a:hover img { opacity: 0.9; }
+.photo-grid figcaption { font-size: 0.925rem; color: var(--ink-soft); margin-top: 0.45rem; }
 
 /* Footer */
 .site-footer { background: var(--accent); color: var(--accent-ink); margin-top: 2rem; }

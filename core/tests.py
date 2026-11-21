@@ -7,6 +7,9 @@ from urllib.parse import urlsplit
 from django.contrib.auth.models import Group, User
 from django.core import mail
 from django.core.files.base import ContentFile
+from django.core.files.images import ImageFile
+from io import BytesIO
+from wagtail.images.models import Image as WagtailImage
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -14,9 +17,10 @@ from PIL import Image
 from wagtail.blocks.struct_block import StructBlockValidationError
 from wagtail.documents.models import Document
 from wagtail.models import Collection
+from wagtail.rich_text import RichText
 
 from core.blocks import AudioBlock, YouTubeBlock, youtube_id
-from core.models import ConcertIndexPage, ConcertPage, GalleryPage
+from core.models import ConcertIndexPage, ConcertPage, GalleryPage, HomePage
 
 TMP_MEDIA = tempfile.mkdtemp()
 
@@ -163,3 +167,40 @@ class SiteTests(TestCase):
         # The link works only once.
         self.client.logout()
         self.assertContains(self.client.get(form_url), "expired or has already been used")
+
+    def test_uploaded_photos_lose_location_data(self):
+        exif = Image.Exif()
+        exif[0x0112] = 6  # taken with the camera on its side
+        exif[0x010F] = "Camera maker"
+        exif.get_ifd(0x8825)[1] = "N"  # GPS
+        for fmt in ["JPEG", "PNG", "WEBP"]:
+            raw = BytesIO()
+            Image.new("RGB", (60, 40), "red").save(raw, fmt, exif=exif.tobytes())
+            image = WagtailImage(title=fmt, file=ImageFile(BytesIO(raw.getvalue()), name=f"photo.{fmt.lower()}"))
+            image.save()
+            with image.open_file() as f:
+                stored = Image.open(f)
+                self.assertEqual(dict(stored.getexif()), {}, fmt)
+            self.assertEqual((image.width, image.height), (40, 60), fmt)  # turned upright
+            self.assertEqual(image.file_size, image.file.size)
+            rendition = image.get_rendition("width-30")
+            with rendition.file.open() as f:
+                self.assertEqual(dict(Image.open(f).getexif()), {}, fmt)
+
+    def test_image_beside_text_block(self):
+        image = WagtailImage(title="choir", file=ImageFile(BytesIO(self.png()), name="choir.png"))
+        image.save()
+        home = HomePage.objects.get()
+        home.body = [("image_text", {"image": image, "alt_text": "The choir", "image_side": "left",
+                                     "text": RichText("<p>About us</p>")})]
+        home.save_revision().publish()
+        html = self.client.get("/").content.decode()
+        self.assertIn('class="image-text"', html)
+        self.assertIn('alt="The choir"', html)
+        self.assertIn("About us", html)
+
+    @staticmethod
+    def png():
+        raw = BytesIO()
+        Image.new("RGB", (40, 30), "white").save(raw, "PNG")
+        return raw.getvalue()

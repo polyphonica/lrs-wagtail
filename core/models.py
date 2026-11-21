@@ -1,9 +1,16 @@
 """The stable content model. Themes only read from these; they never define content."""
+from io import BytesIO
+from pathlib import Path
+
 from django.contrib.auth.views import redirect_to_login
+from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from django.utils import timezone
 from modelcluster.fields import ParentalKey
+from PIL import Image as PILImage, ImageOps
 from wagtail.admin.panels import FieldPanel, FieldRowPanel, InlinePanel, MultiFieldPanel
 from wagtail.contrib.forms.models import AbstractEmailForm, AbstractFormField
 from wagtail.contrib.forms.panels import FormSubmissionsPanel
@@ -11,6 +18,7 @@ from wagtail.contrib.routable_page.models import RoutablePageMixin, path
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
 from wagtail.fields import RichTextField, StreamField
+from wagtail.images.models import Image
 from wagtail.models import Collection, Orderable, Page
 from wagtail.search import index
 from wagtail.snippets.models import register_snippet
@@ -64,9 +72,12 @@ class BasePage(Page):
 
 
 class HomePage(BasePage):
+    quote = models.CharField(max_length=200, blank=True,
+                             help_text="A short review quote shown under the intro, without quotation marks.")
     body = StreamField(PageBody(), blank=True)
 
-    content_panels = BasePage.content_panels + [FieldPanel("body")]
+    content_panels = Page.content_panels + [FieldPanel("intro", heading="Strapline"), FieldPanel("quote"),
+                                            FieldPanel("image"), FieldPanel("body")]
     max_count = 1
     subpage_types = ["core.ConcertIndexPage", "core.StandardPage", "core.ComposersPage",
                      "core.GalleryPage", "core.DocumentsPage", "core.ContactPage"]
@@ -201,3 +212,44 @@ class ContactPage(AbstractEmailForm):
     ]
     max_count = 1
     subpage_types = []
+
+
+# --- Photo privacy ------------------------------------------------------------
+# Phone and camera photos carry hidden data (GPS location, camera, owner) that Wagtail copies into
+# every resized version it serves. Every new upload is re-saved without it, turned upright first.
+CLEAN_QUALITY = 92
+
+
+def without_metadata(file):
+    """(bytes, (width, height)) of the photo with all metadata removed, or None if it has none or can't be read."""
+    try:
+        file.seek(0)
+        photo = PILImage.open(file)
+        photo.load()
+    except Exception:  # not an image Pillow can read; Wagtail's own checks deal with it
+        return None
+    finally:
+        file.seek(0)
+    if not (photo.getexif() or any(key in photo.info for key in ("exif", "xmp", "XML:com.adobe.xmp"))):
+        return None
+    fmt = photo.format
+    clean = ImageOps.exif_transpose(photo)
+    clean.info = {k: v for k, v in clean.info.items() if k == "icc_profile"}  # keep colours, drop the rest
+    out = BytesIO()
+    options = {"icc_profile": clean.info["icc_profile"]} if "icc_profile" in clean.info else {}
+    if fmt != "PNG":
+        options["quality"] = CLEAN_QUALITY
+    clean.save(out, "JPEG" if fmt == "MPO" else fmt, **options)
+    return out.getvalue(), clean.size
+
+
+@receiver(pre_save, sender=Image)
+def strip_photo_metadata(sender, instance, **kwargs):
+    if not instance.file or getattr(instance.file, "_committed", True):
+        return  # no new file in this save
+    cleaned = without_metadata(instance.file)
+    if cleaned is not None:
+        data, size = cleaned
+        instance.file.save(Path(instance.file.name).name, ContentFile(data), save=False)
+        instance.width, instance.height = size  # set after the save, which clears them; upright photos swap sides
+        instance._set_image_file_metadata()  # size and hash of the cleaned file

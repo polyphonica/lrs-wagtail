@@ -123,8 +123,8 @@ class Command(BaseCommand):
         for page in root.get_children().exact_type(Page):  # Wagtail's placeholder welcome page
             page.delete()
         home = root.add_child(instance=HomePage(
-            title="Liverpool Renaissance Singers", slug="home",
-            intro="Renaissance polyphony, sung in Liverpool."))
+            title="Welcome to the Liverpool Renaissance Singers", slug="home",
+            intro="Merseyside’s specialist Early Music choir", quote="a beautiful sound"))
         Site.objects.update_or_create(is_default_site=True, defaults={
             "hostname": "localhost", "root_page": home, "site_name": "Liverpool Renaissance Singers"})
 
@@ -271,9 +271,9 @@ class Command(BaseCommand):
         if not name or not path.is_file():
             return None
         Image = get_image_model()
-        with path.open("rb") as fh:
-            image = Image(title=title, collection=Collection.get_first_root_node())
-            image.file.save(path.name, ImageFile(fh), save=True)
+        with path.open("rb") as fh:  # saved with the file attached, so location data is stripped on the way in
+            image = Image(title=title, collection=Collection.get_first_root_node(), file=ImageFile(fh, name=path.name))
+            image.save()
         return image
 
     def fill_page(self, title, blocks):

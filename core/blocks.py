@@ -30,6 +30,18 @@ class ImageBlock(blocks.StructBlock):
         icon = "image"
 
 
+class ImageTextBlock(blocks.StructBlock):
+    image = ImageChooserBlock()
+    alt_text = blocks.CharBlock(required=False, help_text="Describe the image for people using screen readers.")
+    image_side = blocks.ChoiceBlock(choices=[("left", "Left"), ("right", "Right")], default="left",
+                                    help_text="On phones the image always comes first.")
+    text = blocks.RichTextBlock(features=TEXT_FEATURES)
+
+    class Meta:
+        icon = "image"
+        label = "Image beside text"
+
+
 class GalleryBlock(blocks.StructBlock):
     images = blocks.ListBlock(ImageChooserBlock(), min_num=2)
     caption = blocks.CharBlock(required=False)
@@ -149,5 +161,6 @@ class ConcertBody(CommonBody):
 
 class PageBody(CommonBody):
     heading = blocks.CharBlock(icon="title", form_classname="title")
+    image_text = ImageTextBlock()
     faq = FAQBlock()
     link_card = LinkCardBlock()

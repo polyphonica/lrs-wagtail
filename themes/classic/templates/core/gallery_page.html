@@ -4,7 +4,7 @@
 {% include "includes/page_header.html" %}
 <div class="wrap section">
   {% if page.photos.all %}
-  <ul class="gallery">
+  <ul class="photo-grid">
     {% for photo in page.photos.all %}
     {% image photo.image fill-640x480 format-webp as thumb %}{% image photo.image max-2000x2000 as full %}
     <li><figure>
