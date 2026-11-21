@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load wagtailroutablepage_tags %}
+{% block title %}{% if past %}Past concerts{% else %}{{ page.title }}{% endif %}{% endblock %}
+{% block content %}
+{% include "includes/page_header.html" %}
+<div class="wrap section">
+  <nav class="tabs" aria-label="Concert listings">
+    <a href="{% routablepageurl page 'upcoming_concerts' %}"{% if not past %} aria-current="page"{% endif %}>Forthcoming</a>
+    <a href="{% routablepageurl page 'past_concerts' %}"{% if past %} aria-current="page"{% endif %}>Past concerts</a>
+  </nav>
+  {% if concerts %}
+  <div class="concert-grid">{% for concert in concerts %}{% include "includes/concert_card.html" %}{% endfor %}</div>
+  {% else %}<p class="empty">{% if past %}No past concerts yet.{% else %}New concerts will be announced soon.{% endif %}</p>{% endif %}
+  {% if past and concerts.paginator.num_pages > 1 %}
+  <nav class="pager" aria-label="Pages">
+    {% if concerts.has_previous %}<a href="?page={{ concerts.previous_page_number }}">← Newer</a>{% endif %}
+    <span>Page {{ concerts.number }} of {{ concerts.paginator.num_pages }}</span>
+    {% if concerts.has_next %}<a href="?page={{ concerts.next_page_number }}">Older →</a>{% endif %}
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

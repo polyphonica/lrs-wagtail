@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "includes/page_header.html" %}
+<div class="wrap narrow section">
+  {% for name, docs in document_groups %}
+  <section class="doc-group">
+    <h2>{% if name == "Public" %}General{% elif name == "Members" %}For all members{% else %}Committee only{% endif %}</h2>
+    {% if docs %}<ul class="doc-list">{% for doc in docs %}
+      <li><a href="{{ doc.url }}">{{ doc.title }}</a><span class="doc-meta">{{ doc.file_extension|upper }} · {{ doc.created_at|date:"j M Y" }}{% for tag in doc.tags.all %} · {{ tag.name }}{% endfor %}</span></li>
+    {% endfor %}</ul>{% else %}<p class="empty">No documents yet.</p>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

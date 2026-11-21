@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "includes/page_header.html" %}
+<div class="wrap narrow section">{% for block in page.body %}{% include "includes/block.html" %}{% endfor %}</div>
+{% endblock %}

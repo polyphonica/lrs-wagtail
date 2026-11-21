@@ -1,0 +1,58 @@
+{% load static wagtailcore_tags wagtailimages_tags wagtailuserbar %}{% wagtail_site as current_site %}<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% if page.seo_title %}{{ page.seo_title }}{% elif page %}{{ page.title }}{% endif %}{% endblock %} · Liverpool Renaissance Singers</title>
+<meta name="description" content="{% block description %}{% if page %}{{ page.search_description|default:page.intro|striptags|truncatechars:160 }}{% endif %}{% endblock %}">
+{% if page %}<link rel="canonical" href="{{ page.full_url }}">
+<meta property="og:title" content="{{ page.title }}">
+<meta property="og:description" content="{{ page.intro|default:''|striptags|truncatechars:200 }}">
+<meta property="og:url" content="{{ page.full_url }}">
+{% if page.image %}{% image page.image fill-1200x630 as og %}<meta property="og:image" content="{{ og.full_url }}">{% endif %}{% endif %}
+<meta name="theme-color" content="#5b1a2b">
+<link rel="icon" href="{% static 'favicon.png' %}">
+<link rel="stylesheet" href="{% static 'theme.css' %}">
+<script src="{% static 'theme.js' %}" defer></script>
+{% block head %}{% endblock %}
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/"><img src="{% static 'logo.png' %}" alt="Liverpool Renaissance Singers" width="140" height="80"></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Main">
+        <ul>
+          {% for item in current_site.root_page.get_children.live.in_menu %}
+          <li><a href="{% pageurl item %}"{% if page and item.url_path in page.url_path %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
+          {% endfor %}
+          {% if user.is_authenticated %}
+          <li><a href="/members/">Members</a></li>
+          <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="linklike">Log out</button></form></li>
+          {% else %}
+          <li><a href="{% url 'login' %}">Members' login</a></li>
+          {% endif %}
+        </ul>
+    </nav>
+  </div>
+</header>
+<main id="main">{% block content %}{% endblock %}</main>
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p class="footer-name">Liverpool Renaissance Singers</p>
+    {% with s=settings.core.SiteSettings %}
+    {% if s.footer_text %}<p>{{ s.footer_text }}</p>{% endif %}
+    <p class="footer-links">
+      {% if s.contact_email %}<a href="mailto:{{ s.contact_email }}">{{ s.contact_email }}</a>{% endif %}
+      {% if s.facebook %}<a href="{{ s.facebook }}">Facebook</a>{% endif %}
+      {% if s.instagram %}<a href="{{ s.instagram }}">Instagram</a>{% endif %}
+      {% if s.youtube %}<a href="{{ s.youtube }}">YouTube</a>{% endif %}
+    </p>
+    {% if s.charity_number %}<p class="small">Registered charity {{ s.charity_number }}</p>{% endif %}
+    {% endwith %}
+  </div>
+</footer>
+{% wagtailuserbar %}
+</body>
+</html>

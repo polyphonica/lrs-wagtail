@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% load wagtailcore_tags %}
+{% block content %}
+<div class="wrap narrow section">
+  <h1>{{ page.title }}</h1>
+  {% if page.intro %}<div class="prose">{{ page.intro|richtext }}</div>{% endif %}
+  <form class="form" action="{% pageurl page %}" method="post">{% csrf_token %}
+    {% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{% if field.errors %}<p class="error">{{ field.errors|join:" " }}</p>{% endif %}</div>{% endfor %}
+    <button class="button" type="submit">Send message</button>
+  </form>
+</div>
+{% endblock %}

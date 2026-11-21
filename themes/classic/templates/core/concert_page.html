@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load wagtailcore_tags wagtailimages_tags %}
+{% block head %}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"MusicEvent","name":"{{ page.title|escapejs }}","startDate":"{{ page.date|date:'Y-m-d' }}{% if page.start_time %}T{{ page.start_time|time:'H:i' }}{% endif %}","eventStatus":"https://schema.org/EventScheduled","location":{"@type":"Place","name":"{{ page.venue|escapejs }}","address":"{{ page.venue_address|default:page.venue|escapejs }}"},"performer":{"@type":"MusicGroup","name":"Liverpool Renaissance Singers"}{% if page.booking_url %},"offers":{"@type":"Offer","url":"{{ page.booking_url|escapejs }}"}{% endif %}{% if page.intro %},"description":"{{ page.intro|escapejs }}"{% endif %}}</script>
+{% endblock %}
+{% block content %}
+<article class="concert">
+  <header class="concert-hero">
+    {% if page.image %}<div class="concert-hero-img">{% picture page.image format-{avif,webp,jpeg} width-{640,1280,1920} sizes="(min-width: 60rem) 55vw, 100vw" alt="" fetchpriority="high" %}</div>{% endif %}
+    <div class="concert-hero-text">
+      <p class="eyebrow">{% if page.is_past %}Past concert{% else %}Concert{% endif %}</p>
+      <h1>{{ page.title }}</h1>
+      {% if page.intro %}<p class="lead">{{ page.intro }}</p>{% endif %}
+      <dl class="facts">
+        <div><dt>When</dt><dd><time datetime="{{ page.date|date:'Y-m-d' }}">{{ page.date|date:"l j F Y" }}</time>{% if page.start_time %}, {{ page.start_time|time:"g.i a" }}{% endif %}</dd></div>
+        <div><dt>Where</dt><dd>{{ page.venue }}{% if page.venue_address %}<br><a href="https://www.google.com/maps/search/?api=1&amp;query={{ page.venue_address|urlencode }}">{{ page.venue_address }}</a>{% endif %}</dd></div>
+        {% if page.price %}<div><dt>Tickets</dt><dd>{{ page.price }}</dd></div>{% endif %}
+      </dl>
+      {% if page.booking_url and not page.is_past %}<p><a class="button button-large" href="{{ page.booking_url }}">Book tickets</a></p>{% endif %}
+    </div>
+  </header>
+  <div class="wrap narrow section">{% for block in page.body %}{% include "includes/block.html" %}{% endfor %}</div>
+  <p class="wrap narrow back"><a href="{% pageurl page.get_parent %}">← All concerts</a></p>
+</article>
+{% endblock %}

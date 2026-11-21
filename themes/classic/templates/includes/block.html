@@ -1,0 +1,13 @@
+{% load wagtailcore_tags wagtailimages_tags %}{% with v=block.value t=block.block_type %}
+{% if t == "text" %}<div class="prose">{{ v }}</div>
+{% elif t == "heading" %}<h2 class="block-heading">{{ v }}</h2>
+{% elif t == "image" %}<figure class="figure">{% picture v.image format-{avif,webp,jpeg} width-{480,960,1440} sizes="(min-width: 50rem) 46rem, 100vw" alt=v.alt_text loading="lazy" %}{% if v.caption %}<figcaption>{{ v.caption }}</figcaption>{% endif %}</figure>
+{% elif t == "gallery" %}<figure class="gallery"><div class="gallery-grid">{% for img in v.images %}{% image img width-1600 as big %}<a href="{{ big.url }}">{% picture img format-{avif,webp,jpeg} fill-{400x300,800x600} sizes="(min-width: 50rem) 15rem, 50vw" alt="" loading="lazy" %}</a>{% endfor %}</div>{% if v.caption %}<figcaption>{{ v.caption }}</figcaption>{% endif %}</figure>
+{% elif t == "audio" %}<figure class="audio"><figcaption><strong>{{ v.title }}</strong>{% if v.note %}<span>{{ v.note }}</span>{% endif %}</figcaption><audio controls preload="none" src="{{ v.file.url }}"></audio></figure>
+{% elif t == "video" %}<figure class="video"><a class="yt" href="https://www.youtube.com/watch?v={{ v.video_id }}" data-yt="{{ v.video_id }}"><img src="https://i.ytimg.com/vi/{{ v.video_id }}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360"><span class="yt-play" aria-hidden="true"></span><span class="visually-hidden">Play video{% if v.caption %}: {{ v.caption }}{% endif %}</span></a>{% if v.caption %}<figcaption>{{ v.caption }}</figcaption>{% endif %}</figure>
+{% elif t == "programme" %}<section class="programme"><h2>{{ v.heading }}</h2><ol>{% for item in v.items %}<li><span class="piece">{{ item.piece }}</span>{% if item.composer %}<span class="composer">{{ item.composer.name }}{% if item.composer.dates %} <span class="dates">{{ item.composer.dates }}</span>{% endif %}</span>{% endif %}{% if item.note %}<span class="note">{{ item.note }}</span>{% endif %}</li>{% endfor %}</ol></section>
+{% elif t == "quote" %}<blockquote class="quote"><p>{{ v.quote }}</p>{% if v.attribution %}<cite>{{ v.attribution }}</cite>{% endif %}</blockquote>
+{% elif t == "button" %}<p><a class="button" href="{% if v.page %}{% pageurl v.page %}{% else %}{{ v.url }}{% endif %}">{{ v.label }}</a></p>
+{% elif t == "faq" %}<details class="faq"><summary>{{ v.question }}</summary><div class="prose">{{ v.answer }}</div></details>
+{% elif t == "link_card" %}<a class="link-card" href="{{ v.url }}"><strong>{{ v.title }}</strong>{% if v.description %}<span>{{ v.description }}</span>{% endif %}</a>
+{% endif %}{% endwith %}

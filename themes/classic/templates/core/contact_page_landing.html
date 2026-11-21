@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% load wagtailcore_tags %}
+{% block content %}
+<div class="wrap narrow section"><h1>Thank you</h1>{% if page.thank_you_text %}<div class="prose">{{ page.thank_you_text|richtext }}</div>{% else %}<p>We'll be in touch soon.</p>{% endif %}</div>
+{% endblock %}
