@@ -5,7 +5,7 @@
 
 Create the export on the old server with:
     python manage.py dumpdata auth.group auth.user frontend.concert frontend.composer frontend.faq \
-        frontend.links frontend.homepagecontent documents --indent 1 > lrs_export.json
+        frontend.links frontend.homepagecontent frontend.portfolio documents --indent 1 > lrs_export.json
 Run it only once against a fresh database; setup itself is safe to repeat.
 """
 import json
@@ -21,6 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils.text import slugify
 from wagtail.admin.rich_text.converters.contentstate import ContentstateConverter
+from wagtail.contrib.redirects.models import Redirect
 from wagtail.documents import get_document_model
 from wagtail.images import get_image_model
 from wagtail.models import Collection, CollectionViewRestriction, GroupCollectionPermission, Page, Site
@@ -28,9 +29,11 @@ from wagtail.rich_text import RichText
 
 from core.blocks import TEXT_FEATURES
 from core.models import (Composer, ConcertIndexPage, ConcertPage, ComposersPage, ContactFormField, ContactPage,
-                         DocumentsPage, HomePage, StandardPage)
+                         DocumentsPage, GalleryPage, GalleryPhoto, HomePage, StandardPage)
 
 DOC_PERMS = ["add_document", "change_document", "delete_document", "choose_document"]
+# Old-site photo categories, in gallery order.
+PHOTO_ORDER = ["choir", "concert", "committee", ""]
 
 
 def clean_html(html):
@@ -68,6 +71,8 @@ class Command(BaseCommand):
         self.groups = self.setup_groups()
         self.collections = self.setup_collections()
         self.home = self.setup_pages()
+        self.gallery = self.setup_gallery()
+        self.setup_redirects()
         if export:
             if not media:
                 raise CommandError("--media is required with --import")
@@ -140,6 +145,33 @@ class Command(BaseCommand):
             Page.objects.filter(title=title).update(show_in_menus=True)
         return home
 
+    def setup_gallery(self):
+        gallery = GalleryPage.objects.first()
+        if not gallery:
+            gallery = self.home.add_child(instance=GalleryPage(
+                title="Gallery", slug="gallery", show_in_menus=True, intro="The choir in rehearsal and concert."))
+            contact = ContactPage.objects.child_of(self.home).first()
+            if contact:  # keep Contact last in the menu
+                gallery.move(contact, pos="left")
+        return gallery
+
+    def setup_redirects(self):
+        """Old-site addresses that moved. Per-concert and per-document redirects are made by the import."""
+        concerts = ConcertIndexPage.objects.get()
+        moved = [("/past-concerts/", concerts, "past/"),
+                 ("/our_music/", ComposersPage.objects.get(), None),
+                 ("/document_register/", DocumentsPage.objects.get(), None),
+                 ("/document_register/singer/", DocumentsPage.objects.get(), None),
+                 ("/portfolio/", self.gallery, None)]
+        for old, page, route in moved:
+            self.redirect(old, page, page_route_path=route)
+        for old in ["/calendar/", "/committee-calendar/", "/newsletters/"]:
+            self.redirect(old, self.home, is_permanent=False)  # temporary until Phase 2 builds these pages
+
+    def redirect(self, old_path, target, **kwargs):
+        if not Redirect.objects.filter(old_path=Redirect.normalise_path(old_path), site=None).exists():
+            Redirect.add_redirect(old_path, target, **kwargs)
+
     # --- import ------------------------------------------------------------
     def import_old_site(self, records, media):
         rows = {}
@@ -178,6 +210,7 @@ class Command(BaseCommand):
                 image=self.import_image(media, c.get("image"), c["title"]), body=body)
             index.add_child(instance=page)
             page.save_revision().publish()
+            self.redirect(f"/concert-details/{c['pk']}/", page)
 
         faqs = sorted(rows.get("frontend.faq", []), key=lambda f: f.get("position") or 0)
         if faqs:
@@ -192,6 +225,21 @@ class Command(BaseCommand):
         if home_text:
             self.home.body = [("text", RichText(clean_html(home_text[0]["text"])))]
             self.home.save_revision().publish()
+
+        # The old "position" is usually a display order number; any other text is a role for the caption.
+        order = {name: i for i, name in enumerate(PHOTO_ORDER)}
+        def number(p):
+            return int(p["position"]) if (p.get("position") or "").strip().isdigit() else 999
+        photos = sorted(rows.get("frontend.portfolio", []),
+                        key=lambda p: (order.get(p.get("category") or "", len(order)), number(p), p["pk"]))
+        for p in photos:
+            role = "" if number(p) < 999 or not p.get("position") else p["position"].strip()
+            caption = ", ".join(filter(None, [p.get("name"), role]))
+            image = self.import_image(media, p.get("image"), caption or f"Gallery photo {p['pk']}")
+            if image:
+                self.gallery.photos.add(GalleryPhoto(image=image, caption=caption))
+        if photos:
+            self.gallery.save_revision().publish()
 
         categories = {c["pk"]: c["name"] for c in rows.get("documents.category", [])}
         Document = get_document_model()
@@ -208,10 +256,11 @@ class Command(BaseCommand):
                 doc.file.save(path.name, File(fh), save=True)
             if category:
                 doc.tags.add(category)
+            self.redirect(f"/document_register/download/{d['pk']}/", doc.url)
             Document.objects.filter(pk=doc.pk).update(created_at=f"{d['date']}T12:00:00Z")
 
         self.stdout.write(f"Imported {len(composers)} composers, {len(rows.get('frontend.concert', []))} concerts, "
-                          f"{len(faqs)} FAQs, {len(links)} links, "
+                          f"{len(faqs)} FAQs, {len(links)} links, {self.gallery.photos.count()} photos, "
                           f"{len(rows.get('documents.document', [])) - len(skipped)} documents.")
         if skipped:
             self.stdout.write(self.style.WARNING(

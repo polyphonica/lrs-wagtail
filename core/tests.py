@@ -10,12 +10,13 @@ from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from PIL import Image
 from wagtail.blocks.struct_block import StructBlockValidationError
 from wagtail.documents.models import Document
 from wagtail.models import Collection
 
 from core.blocks import AudioBlock, YouTubeBlock, youtube_id
-from core.models import ConcertIndexPage, ConcertPage
+from core.models import ConcertIndexPage, ConcertPage, GalleryPage
 
 TMP_MEDIA = tempfile.mkdtemp()
 
@@ -96,6 +97,8 @@ class SiteTests(TestCase):
         media = Path(tempfile.mkdtemp())
         (media / "documents").mkdir()
         (media / "documents" / "minutes.pdf").write_bytes(b"%PDF")
+        (media / "img" / "portfolio").mkdir(parents=True)
+        Image.new("RGB", (40, 30), "white").save(media / "img" / "portfolio" / "choir.png")
         export = [
             {"model": "auth.group", "pk": 1, "fields": {"name": "Admins"}},
             {"model": "auth.user", "pk": 1, "fields": {
@@ -109,6 +112,10 @@ class SiteTests(TestCase):
             {"model": "documents.category", "pk": 1, "fields": {"name": "Committee"}},
             {"model": "documents.document", "pk": 1, "fields": {
                 "title": "Minutes", "date": "2024-02-02", "category": 1, "file": "documents/minutes.pdf"}},
+            {"model": "frontend.portfolio", "pk": 4, "fields": {
+                "image": "img/portfolio/choir.png", "category": "committee", "name": "Ann", "position": "Chair"}},
+            {"model": "frontend.portfolio", "pk": 5, "fields": {
+                "image": "img/portfolio/choir.png", "category": "choir", "name": "Choir", "position": "2"}},
         ]
         path = media / "export.json"
         path.write_text(json.dumps(export))
@@ -116,7 +123,26 @@ class SiteTests(TestCase):
         concert = ConcertPage.objects.get(title="Old concert")
         self.assertEqual(concert.start_time.hour, 19)
         self.assertTrue(User.objects.get(username="olduser").groups.filter(name="Committee").exists())
-        self.assertEqual(Document.objects.get(title="Minutes").collection.name, "Committee")
+        minutes = Document.objects.get(title="Minutes")
+        self.assertEqual(minutes.collection.name, "Committee")
+        # Choir photos come first; a numeric position is an order, not part of the caption.
+        self.assertEqual([p.caption for p in GalleryPage.objects.get().photos.all()], ["Choir", "Ann, Chair"])
+        # Old addresses for each concert and document lead to the new ones.
+        self.assertRedirects(self.client.get("/concert-details/1/"), concert.url, status_code=301,
+                             fetch_redirect_response=False)
+        self.assertRedirects(self.client.get("/document_register/download/1/"), minutes.url, status_code=301,
+                             fetch_redirect_response=False)
+
+    def test_old_site_addresses(self):
+        for old, new, code in [("/past-concerts/", "/concerts/past/", 301), ("/our_music/", "/our-music/", 301),
+                               ("/document_register/", "/members/", 301), ("/portfolio/", "/gallery/", 301),
+                               ("/faq", "/faq/", 301), ("/calendar/", "/", 302)]:
+            self.assertRedirects(self.client.get(old), new, status_code=code, fetch_redirect_response=False)
+        self.assertEqual(self.client.get("/gallery/").status_code, 200)
+        robots = self.client.get("/robots.txt").content.decode()
+        self.assertIn("Disallow: /admin/", robots)
+        self.assertIn("Sitemap: http://testserver/sitemap.xml", robots)
+        self.assertContains(self.client.get("/googleda7e415623738d69.html"), "google-site-verification")
 
     def test_password_reset_by_email(self):
         singer = self.users["Singers"]

@@ -11,7 +11,7 @@ from wagtail.contrib.routable_page.models import RoutablePageMixin, path
 from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
 from wagtail.documents import get_document_model
 from wagtail.fields import RichTextField, StreamField
-from wagtail.models import Collection, Page
+from wagtail.models import Collection, Orderable, Page
 from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
@@ -69,7 +69,7 @@ class HomePage(BasePage):
     content_panels = BasePage.content_panels + [FieldPanel("body")]
     max_count = 1
     subpage_types = ["core.ConcertIndexPage", "core.StandardPage", "core.ComposersPage",
-                     "core.DocumentsPage", "core.ContactPage"]
+                     "core.GalleryPage", "core.DocumentsPage", "core.ContactPage"]
 
     def get_context(self, request, *args, **kwargs):
         context = super().get_context(request, *args, **kwargs)
@@ -143,6 +143,21 @@ class ComposersPage(BasePage):
         context = super().get_context(request, *args, **kwargs)
         context["composers"] = Composer.objects.all()
         return context
+
+
+class GalleryPage(BasePage):
+    """Photos of the choir, concerts and committee, shown in the order set in the admin."""
+    content_panels = BasePage.content_panels + [InlinePanel("photos", heading="Photos", label="Photo")]
+    max_count = 1
+    subpage_types = []
+
+
+class GalleryPhoto(Orderable):
+    page = ParentalKey(GalleryPage, on_delete=models.CASCADE, related_name="photos")
+    image = models.ForeignKey("wagtailimages.Image", on_delete=models.CASCADE, related_name="+")
+    caption = models.CharField(max_length=250, blank=True, help_text="Also used as the description for screen readers.")
+
+    panels = [FieldPanel("image"), FieldPanel("caption")]
 
 
 class DocumentsPage(BasePage):

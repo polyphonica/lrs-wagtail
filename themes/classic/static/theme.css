@@ -160,6 +160,13 @@ figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .composer-meta, .doc-meta { color: var(--ink-soft); font-size: 0.9rem; }
 .doc-group { margin-bottom: 2.5rem; }
 
+/* Gallery */
+.gallery { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }
+.gallery figure { margin: 0; }
+.gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--rule); }
+.gallery a:hover img { opacity: 0.9; }
+.gallery figcaption { font-size: 0.925rem; color: var(--ink-soft); margin-top: 0.45rem; }
+
 /* Footer */
 .site-footer { background: var(--accent); color: var(--accent-ink); margin-top: 2rem; }
 .footer-inner { padding-block: 2.5rem; }

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load wagtailimages_tags %}
+{% block content %}
+{% include "includes/page_header.html" %}
+<div class="wrap section">
+  {% if page.photos.all %}
+  <ul class="gallery">
+    {% for photo in page.photos.all %}
+    {% image photo.image fill-640x480 format-webp as thumb %}{% image photo.image max-2000x2000 as full %}
+    <li><figure>
+      <a href="{{ full.url }}"><img src="{{ thumb.url }}" width="{{ thumb.width }}" height="{{ thumb.height }}" alt="{{ photo.caption|default:photo.image.title }}" loading="lazy"></a>
+      {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+    </figure></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">Photos coming soon.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -30,13 +30,15 @@ The site is at http://localhost:8000 and the admin at http://localhost:8000/admi
 On the live server, from the old project:
 ```
 python manage.py dumpdata auth.group auth.user frontend.concert frontend.composer frontend.faq \
-    frontend.links frontend.homepagecontent documents --indent 1 > lrs_export.json
+    frontend.links frontend.homepagecontent frontend.portfolio documents --indent 1 > lrs_export.json
 ```
 Copy `lrs_export.json` and the old `media/` folder across, then on a **fresh** database:
 ```
 python manage.py lrs_setup --import lrs_export.json --media /path/to/old/media
 ```
 Passwords carry over, so members keep their logins. Old Admins become Editors + Committee, and old Singers stay Singers. Documents in the old "Committee" category go to the Committee collection, and all others go to Members. Documents that were only external links are listed at the end, to be added by hand.
+
+Old photo-gallery pictures go to the Gallery page. Old addresses such as `/concert-details/<id>/`, `/past-concerts/` and `/portfolio/` redirect to the new pages; see and edit them in the admin under Settings → Redirects.
 
 ## Who can see what
 

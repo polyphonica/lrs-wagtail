@@ -1,13 +1,32 @@
 from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.contrib.sitemaps.views import sitemap
+from django.http import HttpResponse
 from django.urls import include, path
 from wagtail import urls as wagtail_urls
 from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.contrib.sitemaps import Sitemap
 from wagtail.documents import urls as wagtaildocs_urls
 
+ROBOTS = """User-agent: *
+Disallow: /admin/
+Disallow: /login/
+Disallow: /password-reset/
+Disallow: /members/
+Sitemap: {}
+"""
+# Proves ownership of the site to Google Search Console (same file the old site served).
+GOOGLE_VERIFICATION = "googleda7e415623738d69.html"
+
+
+def robots(request):
+    return HttpResponse(ROBOTS.format(request.build_absolute_uri("/sitemap.xml")), content_type="text/plain")
+
+
 urlpatterns = [
+    path("robots.txt", robots),
+    path(GOOGLE_VERIFICATION, lambda request: HttpResponse(f"google-site-verification: {GOOGLE_VERIFICATION}",
+                                                            content_type="text/plain")),
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
     path("login/", auth_views.LoginView.as_view(template_name="login.html", redirect_authenticated_user=True), name="login"),
