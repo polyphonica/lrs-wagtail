@@ -142,8 +142,10 @@ if env("NGINX_SENDFILE", "0") == "1":
     SENDFILE_URL = "/protected/"
 
 # --- Email -----------------------------------------------------------------
-EMAIL_BACKEND = ("django.core.mail.backends.console.EmailBackend" if DEBUG
-                 else "django.core.mail.backends.smtp.EmailBackend")
+# Locally (DEBUG=1) emails print to the terminal unless EMAIL_BACKEND is set to the SMTP backend.
+EMAIL_BACKEND = env("EMAIL_BACKEND") or ("django.core.mail.backends.console.EmailBackend" if DEBUG
+                                         else "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_TIMEOUT = 20
 EMAIL_HOST = env("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(env("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = True

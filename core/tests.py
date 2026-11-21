@@ -2,8 +2,10 @@ import json
 import tempfile
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from django.contrib.auth.models import Group, User
+from django.core import mail
 from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -115,3 +117,23 @@ class SiteTests(TestCase):
         self.assertEqual(concert.start_time.hour, 19)
         self.assertTrue(User.objects.get(username="olduser").groups.filter(name="Committee").exists())
         self.assertEqual(Document.objects.get(title="Minutes").collection.name, "Committee")
+
+    def test_password_reset_by_email(self):
+        singer = self.users["Singers"]
+        singer.email = "singer@example.org"
+        singer.save()
+        self.assertContains(self.client.get("/login/"), "/password-reset/")
+        # An unknown address gets the same reply and no email, so accounts can't be discovered.
+        response = self.client.post("/password-reset/", {"email": "nobody@example.org"})
+        self.assertRedirects(response, "/password-reset/sent/")
+        self.assertEqual(len(mail.outbox), 0)
+        self.client.post("/password-reset/", {"email": "singer@example.org"})
+        self.assertEqual(len(mail.outbox), 1)
+        link = next(line for line in mail.outbox[0].body.splitlines() if "/password-reset/" in line)
+        form_url = self.client.get(urlsplit(link.strip()).path).url  # Django swaps the token for a session
+        response = self.client.post(form_url, {"new_password1": "a-new-choir-pw", "new_password2": "a-new-choir-pw"})
+        self.assertRedirects(response, "/password-reset/done/")
+        self.assertTrue(self.client.login(username="singers", password="a-new-choir-pw"))
+        # The link works only once.
+        self.client.logout()
+        self.assertContains(self.client.get(form_url), "expired or has already been used")
