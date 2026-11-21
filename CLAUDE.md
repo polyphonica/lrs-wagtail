@@ -30,6 +30,17 @@ Old-site mapping on import: Admins → Editors + Committee; Singers → Singers;
 - **Password reset by email**: themed pages at `/password-reset/`, email wording in `core/templates/core/email/`. Sending uses Gmail SMTP; for now the owner's personal Gmail with an app password. Locally, real sending needs `EMAIL_BACKEND` set in `.env` (git-ignored), loaded with `set -a; source .env; set +a`; otherwise emails print to the terminal. Check settings with `manage.py sendtestemail`.
 - **Redirects from old URLs** (Wagtail redirects, editable under Settings → Redirects): fixed ones made by `lrs_setup`, per-concert and per-document ones by the importer from old ids. `/calendar/`, `/committee-calendar/` and `/newsletters/` point to the home page as temporary (302) redirects; repoint them when those pages exist.
 - **Gallery page** (`/gallery/`), plus `robots.txt` and the Google Search Console verification file at the old site's addresses (`lrs/urls.py`).
+- **Homepage matches the live site**: header shows the choir's name as text (no logo image; the live site has none); heading, strapline and `quote` field carry the live text; new "Image beside text" block holds the choir photo and intro. The two homepage images (score background, choir photo) are content in the local DB only: re-upload on production, ideally a larger score image (the live one is 309 px wide).
+- **Photo privacy**: every uploaded image is re-saved without EXIF/XMP (GPS, camera, owner), turned upright first (`core/models.py`, end). Wagtail would otherwise copy GPS into every served rendition. The importer goes through the same path.
+
+## Next steps (agreed order, 2026-11-21)
+1. Contact-form spam protection (hidden trap field + timing check; no outside service).
+2. Two-step login for admins (django-otp).
+3. Consider a trial deploy on IONOS here, to catch server-only problems (e.g. blocked outgoing email) early.
+4. Calendars: public + committee; then repoint the temporary `/calendar/` and `/committee-calendar/` redirects.
+5. Newsletter (largest job; decide what to do with the 14 old newsletter files).
+6. Singers' accounts (needs the owner's list of names and emails).
+7. Production deploy, trial on a test address, admin sign-off, DNS switch.
 
 ## Working here
 - Local: `export DEBUG=1`, `.venv/bin/python manage.py runserver`; tests: `.venv/bin/python manage.py test core` (keep them passing).
