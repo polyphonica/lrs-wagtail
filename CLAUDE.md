@@ -38,7 +38,7 @@ Two-step login for admins (django-otp) · newsletter (subscribers, sign-up, send
 https://claude.ai/artifact/BGJZprvzmgP39BeMRMU2gW (Claude Doc).
 
 ## Logins (decided 2026-11-21)
-Everyone has an individual login: singers, Committee and Editors. No shared accounts. The old site's per-user accounts and passwords come across on import. When someone leaves, deactivate their account. Password reset by email depends on Phase 2 email sending.
+Everyone has an individual login: singers, Committee and Editors. No shared accounts. The old site has only two accounts, `admin` and a shared `singer1` login, so singers' accounts must be created new before the switch-over, and `singer1` is then deactivated. When someone leaves, deactivate their account. Password reset by email depends on Phase 2 email sending.
 
 ## Known issue in the old site
 `../LRS/choir/settings.py` (tracked in git) contains a hard-coded database password. Flagged to the owner; not yet fixed.
