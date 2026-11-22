@@ -33,7 +33,7 @@ from wagtail.models import Collection, Orderable, Page
 from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
-from .blocks import TEXT_FEATURES, ConcertBody, PageBody
+from .blocks import TEXT_FEATURES, ButtonBlock, ConcertBody, PageBody
 
 logger = logging.getLogger(__name__)
 
@@ -64,12 +64,26 @@ class Composer(index.Indexed, models.Model):
 
 @register_setting(icon="cog")
 class SiteSettings(BaseSiteSetting):
-    contact_email = models.EmailField(blank=True)
+    """What the footer shows on every page (Settings → Site settings in the admin)."""
+    footer_text = models.CharField(max_length=300, blank=True, help_text="A sentence about the choir.")
     charity_number = models.CharField(max_length=40, blank=True)
-    footer_text = models.CharField(max_length=300, blank=True)
+    footer_links = StreamField([("link", ButtonBlock())], blank=True, help_text="The footer's 'Useful links'.")
+    contact_email = models.EmailField(blank=True, help_text="Also where replies to newsletters go.")
+    donate_url = models.URLField("Donate link", blank=True)
+    donate_label = models.CharField(max_length=80, blank=True, help_text="e.g. Give As You Live")
     facebook = models.URLField(blank=True)
     instagram = models.URLField(blank=True)
     youtube = models.URLField(blank=True)
+
+    panels = [
+        MultiFieldPanel([FieldPanel("footer_text"), FieldPanel("charity_number")], heading="About the choir"),
+        FieldPanel("footer_links"),
+        MultiFieldPanel([FieldPanel("contact_email"),
+                         FieldRowPanel([FieldPanel("donate_url"), FieldPanel("donate_label")])],
+                        heading="Contact and support"),
+        MultiFieldPanel([FieldPanel("facebook"), FieldPanel("instagram"), FieldPanel("youtube")],
+                        heading="Social media"),
+    ]
 
 
 class BasePage(Page):

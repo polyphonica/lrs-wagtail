@@ -309,6 +309,20 @@ class SiteTests(TestCase):
         Subscriber.objects.create(pk=ann.pk, email="bob@example.org")
         self.assertContains(self.client.get(path), "Not on the list")
 
+    def test_footer_like_the_old_site(self):
+        page = self.client.get("/gallery/")
+        footer = page.content.decode().split('<footer class="site-footer">')[1]
+        for text in ["registered charity – no.&nbsp;1189084", "Useful links", 'href="/our-music/">Our music',
+                     "renaissancesingersliverpool@gmail.com", "Give As You Live", "Facebook",
+                     "Join our mailing list"]:
+            self.assertIn(text, footer)
+        # Its sign-up form works from any page, with the same spam checks as the Newsletter page.
+        with patch("core.models.time.time", return_value=time.time() + 60):
+            reply = self.client.post("/newsletters/", {"name": "", "email": "fan@example.org",
+                                                       "started": page.context["footer_signup"]["started"]})
+        self.assertContains(reply, "Please check your email")
+        self.assertEqual(mail.outbox[0].to, ["fan@example.org"])
+
     @override_settings(NEWSLETTER_DAILY_LIMIT=3, WAGTAILADMIN_BASE_URL="https://choir.example")
     def test_sending_a_newsletter(self):
         settings = SiteSettings.for_site(HomePage.objects.get().get_site())

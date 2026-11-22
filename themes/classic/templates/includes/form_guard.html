@@ -1,3 +1,3 @@
 {# Spam protection (core.models.FormGuard): a time stamp, and a box people never see but bots fill in. #}
 <input type="hidden" name="{{ started_field }}" value="{{ started }}">
-<div class="visually-hidden" aria-hidden="true"><label for="id_{{ trap_field }}">Leave this empty</label><input type="text" id="id_{{ trap_field }}" name="{{ trap_field }}" tabindex="-1" autocomplete="off"></div>
+<div class="visually-hidden" aria-hidden="true"><label for="{{ prefix|default:'id' }}_{{ trap_field }}">Leave this empty</label><input type="text" id="{{ prefix|default:'id' }}_{{ trap_field }}" name="{{ trap_field }}" tabindex="-1" autocomplete="off"></div>

@@ -29,7 +29,8 @@ from wagtail.rich_text import RichText
 
 from core.blocks import TEXT_FEATURES
 from core.models import (Composer, ConcertIndexPage, ConcertPage, ComposersPage, ContactFormField, ContactPage,
-                         DocumentsPage, GalleryPage, GalleryPhoto, HomePage, NewsletterIndexPage, StandardPage)
+                         DocumentsPage, GalleryPage, GalleryPhoto, HomePage, NewsletterIndexPage, SiteSettings,
+                         StandardPage)
 
 DOC_PERMS = ["add_document", "change_document", "delete_document", "choose_document"]
 # Old-site photo categories, in gallery order.
@@ -73,6 +74,7 @@ class Command(BaseCommand):
         self.home = self.setup_pages()
         self.gallery = self.setup_gallery()
         self.setup_newsletter()
+        self.setup_footer()
         self.setup_redirects()
         if export:
             if not media:
@@ -168,6 +170,31 @@ class Command(BaseCommand):
                 title="Newsletter", slug="newsletters",
                 intro="News of our concerts and the choir, a few times a year, by email."))
         Redirect.objects.filter(old_path="/newsletters", site=None).delete()  # was temporary, to the home page
+
+    def setup_footer(self):
+        """The live site's footer wording and links. Only fills settings that are still empty."""
+        settings = SiteSettings.for_site(self.home.get_site())
+        live = {
+            "footer_text": "Liverpool-based chamber choir, performing sacred and secular Renaissance music "
+                           "in the North of England",
+            "charity_number": "1189084",
+            "contact_email": "renaissancesingersliverpool@gmail.com",
+            "donate_url": "https://www.giveasyoulive.com/join/liverpool-renaissance-singers-235217",
+            "donate_label": "Give As You Live",
+            "facebook": "https://www.facebook.com/LiverpoolRenaissanceSingers/",
+        }
+        for field, value in live.items():
+            if not getattr(settings, field):
+                setattr(settings, field, value)
+        if not settings.footer_links:
+            links = [("Home", self.home), ("About us", "about"), ("Our music", "our-music"),
+                     ("Concerts", "concerts"), ("Join the choir (including FAQs)", "join"),
+                     ("Other websites", "links")]
+            settings.footer_links = [
+                ("link", {"label": label, "page": page, "url": ""}) for label, page in
+                ((label, p if isinstance(p, Page) else Page.objects.child_of(self.home).filter(slug=p).first())
+                 for label, p in links) if page]
+        settings.save()
 
     def setup_redirects(self):
         """Old-site addresses that moved. Per-concert and per-document redirects are made by the import."""

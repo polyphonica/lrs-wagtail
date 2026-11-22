@@ -39,20 +39,46 @@
 </header>
 <main id="main">{% block content %}{% endblock %}</main>
 <footer class="site-footer">
-  <div class="wrap footer-inner">
-    <p class="footer-name">Liverpool Renaissance Singers</p>
-    {% with s=settings.core.SiteSettings %}
-    {% if s.footer_text %}<p>{{ s.footer_text }}</p>{% endif %}
-    <p class="footer-links">
-      {% if s.contact_email %}<a href="mailto:{{ s.contact_email }}">{{ s.contact_email }}</a>{% endif %}
-      {% if s.facebook %}<a href="{{ s.facebook }}">Facebook</a>{% endif %}
-      {% if s.instagram %}<a href="{{ s.instagram }}">Instagram</a>{% endif %}
-      {% if s.youtube %}<a href="{{ s.youtube }}">YouTube</a>{% endif %}
-      {% slugurl "newsletters" as newsletter_url %}{% if newsletter_url %}<a href="{{ newsletter_url }}">Newsletter</a>{% endif %}
-    </p>
-    {% if s.charity_number %}<p class="small">Registered charity {{ s.charity_number }}</p>{% endif %}
-    {% endwith %}
+  {% with s=settings.core.SiteSettings %}
+  <div class="wrap footer-grid">
+    <section>
+      <p class="footer-name">Liverpool Renaissance Singers</p>
+      {% if s.footer_text %}<p>{{ s.footer_text }}</p>{% endif %}
+      {% if s.charity_number %}<p>Liverpool Renaissance Singers is a registered charity – no.&nbsp;{{ s.charity_number }}.</p>{% endif %}
+    </section>
+    {% if s.footer_links %}
+    <nav aria-labelledby="footer-links-heading">
+      <h2 id="footer-links-heading">Useful links</h2>
+      <ul class="footer-list">{% for link in s.footer_links %}
+        <li><a href="{% if link.value.page %}{% pageurl link.value.page %}{% else %}{{ link.value.url }}{% endif %}">{{ link.value.label }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+    {% endif %}
+    <section>
+      {% if s.contact_email %}<h2>Contact us</h2>
+      <p><strong>Email:</strong> <a href="mailto:{{ s.contact_email }}">{{ s.contact_email }}</a></p>{% endif %}
+      {% if s.donate_url %}<h2>Support us</h2>
+      <p><strong>Donate:</strong> <a href="{{ s.donate_url }}">{{ s.donate_label|default:"Donate" }}</a></p>{% endif %}
+      {% if s.facebook or s.instagram or s.youtube %}<p class="footer-social">
+        {% if s.facebook %}<a class="social-icon" href="{{ s.facebook }}" aria-label="Facebook"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.5 21v-7.5H16l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4A21 21 0 0 0 14.3 4.3c-2.3 0-3.8 1.4-3.8 3.9v2.3H8v3h2.5V21z"/></svg></a>{% endif %}
+        {% if s.instagram %}<a href="{{ s.instagram }}">Instagram</a>{% endif %}
+        {% if s.youtube %}<a href="{{ s.youtube }}">YouTube</a>{% endif %}
+      </p>{% endif %}
+    </section>
+    {% if footer_signup %}
+    <section>
+      <h2>Join our mailing list</h2>
+      <p>If you would like to be kept up to date, join our mailing list.</p>
+      <form class="footer-form" action="{{ footer_signup.url }}" method="post">{% csrf_token %}
+        {% include "includes/form_guard.html" with prefix="footer" trap_field=footer_signup.trap_field started_field=footer_signup.started_field started=footer_signup.started %}
+        <label for="footer-name">Name</label><input id="footer-name" name="name" autocomplete="name" maxlength="200">
+        <label for="footer-email">Email</label><input id="footer-email" name="email" type="email" autocomplete="email" required>
+        <button class="button" type="submit">Subscribe</button>
+      </form>
+    </section>
+    {% endif %}
   </div>
+  {% endwith %}
 </footer>
 {% wagtailuserbar %}
 </body>
