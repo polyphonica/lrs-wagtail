@@ -50,6 +50,7 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
    - re-upload the two homepage images, ideally a larger score image (the live one is 309 px wide);
    - add email addresses to imported accounts;
    - deactivate `singer1` once singers have their own accounts.
+   - accounts made only on the preview (so far: `anna`, Editor, the choir's website contact, added 2026-11-22) exist only in the preview database: recreate them unless production starts from a copy of it.
 
 ## Working here
 - Local: `export DEBUG=1`, `.venv/bin/python manage.py runserver`; tests: `DEBUG=1 .venv/bin/python manage.py test core` (keep them passing; without `DEBUG=1` or `SECRET_KEY` settings refuse to load).
