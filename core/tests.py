@@ -314,7 +314,7 @@ class SiteTests(TestCase):
         footer = page.content.decode().split('<footer class="site-footer">')[1]
         for text in ["registered charity – no.&nbsp;1189084", "Useful links", 'href="/our-music/">Our music',
                      "renaissancesingersliverpool@gmail.com", "Give As You Live", "Facebook",
-                     "Join our mailing list"]:
+                     "Join our mailing list", 'href="/newsletters/">Read past newsletters']:
             self.assertIn(text, footer)
         # Its sign-up form works from any page, with the same spam checks as the Newsletter page.
         with patch("core.models.time.time", return_value=time.time() + 60):

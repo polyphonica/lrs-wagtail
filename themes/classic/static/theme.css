@@ -194,3 +194,4 @@ figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .footer-form label { font-weight: 600; }
 .footer-form input { font: inherit; padding: 0.55rem 0.7rem; border: 0; border-radius: 8px; background: var(--surface); color: var(--ink); width: 100%; }
 .footer-form .button { justify-self: start; margin-top: 0.5rem; background: var(--gold); color: #1b1113; }
+.footer-grid .footer-more { margin-top: 1rem; }
