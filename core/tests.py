@@ -1,7 +1,9 @@
 import json
 import tempfile
+import time
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlsplit
 
 from django.contrib.auth.models import Group, User
@@ -20,7 +22,7 @@ from wagtail.models import Collection
 from wagtail.rich_text import RichText
 
 from core.blocks import AudioBlock, YouTubeBlock, youtube_id
-from core.models import ConcertIndexPage, ConcertPage, GalleryPage, HomePage
+from core.models import ConcertIndexPage, ConcertPage, ContactPage, GalleryPage, HomePage
 
 TMP_MEDIA = tempfile.mkdtemp()
 
@@ -147,6 +149,36 @@ class SiteTests(TestCase):
         self.assertIn("Disallow: /admin/", robots)
         self.assertIn("Sitemap: http://testserver/sitemap.xml", robots)
         self.assertContains(self.client.get("/googleda7e415623738d69.html"), "google-site-verification")
+
+    def test_contact_form_spam_protection(self):
+        contact = ContactPage.objects.get()
+        contact.to_address = "choir@example.org"
+        contact.save()
+        page = self.client.get(contact.url)
+        started = page.context["started"]
+        message = {"your_name": "Ann", "email": "ann@example.org", "message": "Hello"}
+
+        def send(seconds_ago=60, **extra):
+            data = {**message, "started": started, **extra}
+            with patch("core.models.time.time", return_value=time.time() + seconds_ago):
+                return self.client.post(contact.url, data)
+
+        # Bots: trap box filled, sent too fast, missing or forged time stamp. Thank-you page, nothing kept.
+        for response in [send(website="http://spam.example"), send(seconds_ago=1),
+                         self.client.post(contact.url, message),
+                         self.client.post(contact.url, {**message, "started": "forged"})]:
+            self.assertContains(response, "Thank you")
+        self.assertEqual(contact.get_submissions().count(), 0)
+        self.assertEqual(len(mail.outbox), 0)
+        # A person who left the page open for days is asked to send again; what they typed stays.
+        response = send(seconds_ago=3 * 24 * 60 * 60)
+        self.assertContains(response, "Please press Send again")
+        self.assertContains(response, "Hello")
+        # A real message is stored and emailed, without the spam-check fields.
+        self.assertContains(send(), "Thank you")
+        self.assertEqual(contact.get_submissions().get().get_data()["message"], "Hello")
+        self.assertNotIn("started", mail.outbox[0].body)
+        self.assertNotIn("website", mail.outbox[0].body)
 
     def test_password_reset_by_email(self):
         singer = self.users["Singers"]

@@ -1,13 +1,17 @@
 """The stable content model. Themes only read from these; they never define content."""
+import logging
+import time
 from io import BytesIO
 from pathlib import Path
 
 from django.contrib.auth.views import redirect_to_login
+from django.core import signing
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.template.response import TemplateResponse
 from django.utils import timezone
 from modelcluster.fields import ParentalKey
 from PIL import Image as PILImage, ImageOps
@@ -24,6 +28,8 @@ from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
 from .blocks import TEXT_FEATURES, ConcertBody, PageBody
+
+logger = logging.getLogger(__name__)
 
 # Document collections members can browse, in display order. "Audio" holds concert samples.
 DOCUMENT_COLLECTIONS = ["Public", "Members", "Committee"]
@@ -212,6 +218,52 @@ class ContactPage(AbstractEmailForm):
     ]
     max_count = 1
     subpage_types = []
+
+    # Spam protection, no outside service. Two checks that people never notice:
+    # - a "website" box hidden from people (screen readers and keyboards skip it too); bots fill it in;
+    # - a signed time stamp in the form; a reply sent within seconds of the page loading is a bot.
+    # Both stay outside the Wagtail form, so they are never stored or emailed. Spam gets the normal
+    # thank-you page (so bots learn nothing) but is not saved or sent.
+    TRAP_FIELD = "website"
+    STARTED_FIELD = "started"
+    MIN_SECONDS = 3
+    MAX_SECONDS = 2 * 24 * 60 * 60
+    SIGNING_SALT = "lrs.contact"
+
+    def spam_check(self, data):
+        """Return "spam", "expired" (a person who left the page open too long) or "" (fine)."""
+        if data.get(self.TRAP_FIELD):
+            return "spam"
+        try:
+            started = signing.loads(data.get(self.STARTED_FIELD, ""), salt=self.SIGNING_SALT,
+                                    max_age=self.MAX_SECONDS)
+        except signing.SignatureExpired:
+            return "expired"
+        except signing.BadSignature:
+            return "spam"
+        return "spam" if time.time() - started < self.MIN_SECONDS else ""
+
+    def get_context(self, request, *args, **kwargs):
+        context = super().get_context(request, *args, **kwargs)
+        context["trap_field"] = self.TRAP_FIELD
+        context["started_field"] = self.STARTED_FIELD
+        context["started"] = signing.dumps(time.time(), salt=self.SIGNING_SALT)
+        return context
+
+    def serve(self, request, *args, **kwargs):
+        if request.method == "POST":
+            verdict = self.spam_check(request.POST)
+            if verdict == "spam":
+                logger.info("Contact form: spam blocked")
+                return self.render_landing_page(request, None, *args, **kwargs)
+            if verdict == "expired":
+                form = self.get_form(request.POST, request.FILES, page=self, user=request.user)
+                form.is_valid()
+                form.add_error(None, "This page was open for a long time. Please press Send again.")
+                context = self.get_context(request)
+                context["form"] = form
+                return TemplateResponse(request, self.get_template(request), context)
+        return super().serve(request, *args, **kwargs)
 
 
 # --- Photo privacy ------------------------------------------------------------

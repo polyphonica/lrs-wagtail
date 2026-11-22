@@ -35,9 +35,10 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 - **Gallery page** (`/gallery/`), plus `robots.txt` and the Google Search Console verification file at the old site's addresses (`lrs/urls.py`).
 - **Homepage matches the live site**: header shows the choir's name as text (no logo image; the live site has none); heading, strapline and `quote` field carry the live text; new "Image beside text" block holds the choir photo and intro. The two homepage images (score background, choir photo) are in the local DB only (see step 7).
 - **Photo privacy**: every uploaded image is re-saved without EXIF/XMP (GPS, camera, owner), turned upright first (`core/models.py`, end). Wagtail would otherwise copy GPS into every served rendition. The importer goes through the same path.
+- **Contact-form spam protection** (`ContactPage` in `core/models.py`): a hidden "website" trap box plus a signed time stamp (under 3 seconds = bot; over 2 days = "please press Send again"). Spam gets the normal thank-you page but is not stored or emailed. Both checks sit outside the Wagtail form, so editors can change the form fields freely.
 
 ## Next steps (agreed order, 2026-11-21)
-1. Contact-form spam protection (hidden trap field + timing check; no outside service).
+1. ~~Contact-form spam protection~~ (done 2026-11-22).
 2. Two-step login for admins (django-otp).
 3. Consider a trial deploy on IONOS here, to catch server-only problems (e.g. blocked outgoing email) early.
 4. Calendars: public + committee; then repoint the temporary `/calendar/` and `/committee-calendar/` redirects.
