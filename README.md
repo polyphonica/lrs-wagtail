@@ -79,4 +79,4 @@ Background jobs (once): copy `deploy/lrs-jobs.service` and `deploy/lrs-jobs.time
 
 ## Not yet built (phase 2)
 
-See "Next steps" in `CLAUDE.md`: two-step login for admins, calendars, newsletter, singers' accounts, switch-over.
+See "Next steps" in `CLAUDE.md`: two-step login for admins, calendars, importing the old site's newsletter subscribers and past newsletters, singers' accounts, switch-over. (The newsletter itself is built: sign-up, subscribers and sending.)
