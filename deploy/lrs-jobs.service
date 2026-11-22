@@ -1,0 +1,22 @@
+# Background jobs, started every minute by lrs-jobs.timer: send waiting newsletter emails (a batch per
+# run), then make resized pictures for anything edited in the admin in the last few minutes.
+# On the server: /etc/systemd/system/lrs-jobs.service and .timer, then
+#   systemctl daemon-reload && systemctl enable --now lrs-jobs.timer
+# A run still going when the next is due is not started twice. Log: journalctl -u lrs-jobs
+[Unit]
+Description=LRS website background jobs (newsletter, pictures)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=lrs
+Group=lrs
+WorkingDirectory=/var/www/lrs/app
+EnvironmentFile=/var/www/lrs/.env
+# "-": a sending problem (logged) must not stop the pictures job.
+ExecStart=-/var/www/lrs/venv/bin/python manage.py send_newsletters
+ExecStart=/var/www/lrs/venv/bin/python manage.py warm_images
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes

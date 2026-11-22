@@ -1,0 +1,11 @@
+# Runs lrs-jobs.service every minute. See the notes in that file.
+[Unit]
+Description=Run LRS website background jobs every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

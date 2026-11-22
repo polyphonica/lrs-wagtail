@@ -72,9 +72,10 @@ sudo -u lrs bash -c 'cd /var/www/lrs/app && set -a && . ../.env && set +a && \
   ../venv/bin/pip install -qr requirements.txt && ../venv/bin/python manage.py migrate && \
   ../venv/bin/python manage.py collectstatic --noinput'
 systemctl reload lrs
+sudo -u lrs bash -c 'cd /var/www/lrs/app && set -a && . ../.env && set +a && ../venv/bin/python manage.py warm_images --all'
 ```
 
-Newsletter sending (once): copy `deploy/lrs-newsletter.service` and `deploy/lrs-newsletter.timer` to `/etc/systemd/system/`, then `systemctl daemon-reload && systemctl enable --now lrs-newsletter.timer`. Check with `systemctl list-timers lrs-newsletter.timer` and `journalctl -u lrs-newsletter`.
+Background jobs (once): copy `deploy/lrs-jobs.service` and `deploy/lrs-jobs.timer` to `/etc/systemd/system/`, then `systemctl daemon-reload && systemctl enable --now lrs-jobs.timer`. Every minute it sends waiting newsletter emails and makes resized pictures for anything just edited. Check with `systemctl list-timers lrs-jobs.timer` and `journalctl -u lrs-jobs`.
 
 ## Not yet built (phase 2)
 

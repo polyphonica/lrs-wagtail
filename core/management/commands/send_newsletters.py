@@ -1,4 +1,4 @@
-"""Send waiting newsletter emails, a batch at a time (run every minute on the server by lrs-newsletter.timer).
+"""Send waiting newsletter emails, a batch at a time (run every minute on the server by lrs-jobs.timer).
 
     python manage.py send_newsletters           # one batch
     python manage.py send_newsletters --all     # locally: keep going until done or the daily limit is reached

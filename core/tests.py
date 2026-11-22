@@ -222,6 +222,42 @@ class SiteTests(TestCase):
             with rendition.file.open() as f:
                 self.assertEqual(dict(Image.open(f).getexif()), {}, fmt)
 
+    def test_large_photos_are_shrunk_and_pictures_made_in_advance(self):
+        from core.models import MAX_ORIGINAL, shrink_original
+        raw = BytesIO()
+        Image.new("RGB", (4000, 2000), "blue").save(raw, "JPEG")
+        upload = WagtailImage(title="big", file=ImageFile(BytesIO(raw.getvalue()), name="big.jpg"))
+        upload.save()
+        self.assertEqual((upload.width, upload.height), (MAX_ORIGINAL, 1500))
+        with upload.open_file() as f:
+            self.assertEqual(Image.open(f).size, (MAX_ORIGINAL, 1500))
+        # One stored before the limit existed: shrunk later, its focal point moved to match.
+        old = WagtailImage(title="old", focal_point_x=2000, focal_point_y=1000, focal_point_width=400,
+                           focal_point_height=200)
+        old.file.save("old.jpg", ContentFile(raw.getvalue()), save=False)
+        old.width, old.height = 4000, 2000
+        WagtailImage.objects.bulk_create([old])  # skips the upload cleaning, like an old upload
+        old = WagtailImage.objects.get(title="old")
+        old_file = old.file.name
+        old.get_rendition("width-100")
+        self.assertTrue(shrink_original(old))
+        old.refresh_from_db()
+        self.assertEqual((old.width, old.focal_point_x, old.focal_point_width), (MAX_ORIGINAL, 1500, 300))
+        self.assertFalse(old.renditions.exists())
+        self.assertFalse(old.file.storage.exists(old_file))
+        self.assertFalse(shrink_original(old))
+        # warm_images visits the site and makes the pictures pages show, before any visitor does.
+        concert = ConcertPage.objects.get(title="Past")
+        concert.image = upload
+        concert.save_revision().publish()
+        upload.renditions.all().delete()
+        call_command("warm_images", stdout=open("/dev/null", "w"))  # just published, so it runs
+        made = upload.renditions.count()
+        self.assertGreater(made, 4)
+        response = self.client.get("/concerts/past/")
+        self.assertEqual(upload.renditions.count(), made)  # nothing left for the visitor to make
+        self.assertContains(response, "big")
+
     def test_image_beside_text_block(self):
         image = WagtailImage(title="choir", file=ImageFile(BytesIO(self.png()), name="choir.png"))
         image.save()

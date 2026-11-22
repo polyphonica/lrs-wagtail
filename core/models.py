@@ -398,14 +398,18 @@ class NewsletterDelivery(models.Model):
         constraints = [models.UniqueConstraint(fields=["send", "subscriber"], name="one_delivery_each")]
 
 
-# --- Photo privacy ------------------------------------------------------------
+# --- Photo privacy and size ----------------------------------------------------------
 # Phone and camera photos carry hidden data (GPS location, camera, owner) that Wagtail copies into
-# every resized version it serves. Every new upload is re-saved without it, turned upright first.
+# every resized version it serves, and are often far larger than the site ever shows, which makes
+# every resized copy slow to make. Every new upload is re-saved without the hidden data, turned
+# upright, and shrunk to MAX_ORIGINAL pixels on its long side (more than any size the theme uses).
 CLEAN_QUALITY = 92
+MAX_ORIGINAL = 3000
 
 
-def without_metadata(file):
-    """(bytes, (width, height)) of the photo with all metadata removed, or None if it has none or can't be read."""
+def cleaned_photo(file):
+    """(bytes, (width, height)) of the photo without metadata and at most MAX_ORIGINAL on its long side,
+    or None if it needs neither or can't be read."""
     try:
         file.seek(0)
         photo = PILImage.open(file)
@@ -414,13 +418,16 @@ def without_metadata(file):
         return None
     finally:
         file.seek(0)
-    if not (photo.getexif() or any(key in photo.info for key in ("exif", "xmp", "XML:com.adobe.xmp"))):
+    has_metadata = photo.getexif() or any(key in photo.info for key in ("exif", "xmp", "XML:com.adobe.xmp"))
+    if not has_metadata and max(photo.size) <= MAX_ORIGINAL:
         return None
     fmt = photo.format
     clean = ImageOps.exif_transpose(photo)
-    clean.info = {k: v for k, v in clean.info.items() if k == "icc_profile"}  # keep colours, drop the rest
+    icc = clean.info.get("icc_profile")  # keep colours, drop the rest
+    clean.thumbnail((MAX_ORIGINAL, MAX_ORIGINAL), PILImage.Resampling.LANCZOS)
+    clean.info = {}
     out = BytesIO()
-    options = {"icc_profile": clean.info["icc_profile"]} if "icc_profile" in clean.info else {}
+    options = {"icc_profile": icc} if icc else {}
     if fmt != "PNG":
         options["quality"] = CLEAN_QUALITY
     clean.save(out, "JPEG" if fmt == "MPO" else fmt, **options)
@@ -428,12 +435,33 @@ def without_metadata(file):
 
 
 @receiver(pre_save, sender=Image)
-def strip_photo_metadata(sender, instance, **kwargs):
+def clean_photo(sender, instance, **kwargs):
     if not instance.file or getattr(instance.file, "_committed", True):
         return  # no new file in this save
-    cleaned = without_metadata(instance.file)
+    cleaned = cleaned_photo(instance.file)
     if cleaned is not None:
         data, size = cleaned
         instance.file.save(Path(instance.file.name).name, ContentFile(data), save=False)
         instance.width, instance.height = size  # set after the save, which clears them; upright photos swap sides
         instance._set_image_file_metadata()  # size and hash of the cleaned file
+
+
+def shrink_original(image):
+    """Shrink an image uploaded before MAX_ORIGINAL existed: same cleaning as an upload, with the
+    focal point moved to match, and the old file and resized copies removed. Returns True if shrunk."""
+    if max(image.width, image.height) <= MAX_ORIGINAL:
+        return False
+    old_name, old_width = image.file.name, image.width
+    with image.open_file() as f:
+        data = f.read()
+    image.file = ContentFile(data, name=Path(old_name).name)
+    image.save()  # clean_photo shrinks it
+    if image.focal_point_width:
+        scale = image.width / old_width
+        for field in ["focal_point_x", "focal_point_y", "focal_point_width", "focal_point_height"]:
+            setattr(image, field, max(1, round(getattr(image, field) * scale)))
+        image.save(update_fields=["focal_point_x", "focal_point_y", "focal_point_width", "focal_point_height"])
+    image.renditions.all().delete()  # their files are removed with them
+    if image.file.name != old_name:
+        image.file.storage.delete(old_name)
+    return True
