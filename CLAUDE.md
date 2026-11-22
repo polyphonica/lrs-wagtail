@@ -47,12 +47,13 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 2. Two-step login for admins (django-otp). **Parked 2026-11-22: awaiting committee approval.** Proposed plan: required for everyone with admin access (not singers), QR-code setup on first login (adds the `qrcode` package), 10 backup codes, a `manage.py` command to reset a locked-out admin, code page under the nginx login rate limit.
 3. ~~Trial deploy on the new IONOS server~~ (done 2026-11-22): https://choir.tywynwebsites.co.uk, behind an nginx password (user `choir`). Next: show it to the choir's website contact.
 4. Calendars: public + committee; then repoint the temporary `/calendar/` and `/committee-calendar/` redirects. **Parked 2026-11-22: committee to decide** whether to use a calendar on the new site or keep using Google Calendar in the choir's Google account (if Google: link or load-on-click embed, like YouTube, and repoint the redirects to it).
-5. Newsletter: **built locally 2026-11-22** (see "Built in Phase 2"); the owner chose send-from-site before the committee answered questions 6–8. Still to do: import the old site's subscribers and its 14 newsletter files in `media/newsletters/` (old code and files are on the other computer: read `../LRS` there first). On the preview server since 2026-11-22: the code, `lrs-jobs.timer` (enabled) and the nginx sign-up limit (previous nginx file: `/root/zz-lrs-before-newsletter-2026-11-22`).
+5. Newsletter: **built locally 2026-11-22** (see "Built in Phase 2"); the owner chose send-from-site before the committee answered questions 6–8. Still to do: import the old site's subscribers and its 14 newsletter files in `media/newsletters/` (old code and files are on the other computer: read `../LRS` there first). On the preview server since 2026-11-22: the code, `lrs-jobs.timer` (enabled) and the nginx sign-up limit.
 6. Singers' accounts: bulk creation (needs the owner's list of names and emails).
 7. Production deploy on IONOS (gunicorn unit, Postgres, certbot), trial run on a test address, admin sign-off, DNS switch with the old site kept as a fallback. On production also:
    - re-upload the two homepage images, ideally a larger score image (the live one is 309 px wide);
    - add email addresses to imported accounts;
    - deactivate `singer1` once singers have their own accounts.
+   - remove the preview password from `deploy/nginx.conf`: both `auth_basic` lines in the server block and the `auth_basic off;` under `/media/images/` (added 2026-11-22 so Gmail can load newsletter pictures).
    - accounts made only on the preview (so far: `anna`, Editor, the choir's website contact, added 2026-11-22) exist only in the preview database: recreate them unless production starts from a copy of it.
 
 ## Working here
