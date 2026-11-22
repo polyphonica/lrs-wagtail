@@ -10,7 +10,7 @@ core/           the stable content model
   management/commands/lrs_setup.py   groups, collections, access rules, page tree, import from the old site
   tests.py
 themes/classic/ the design: templates + one CSS file + one small JS file
-deploy/         nginx config and an example .env
+deploy/         nginx site, gunicorn systemd unit and an example .env
 ```
 
 ## Run it locally
@@ -61,11 +61,19 @@ Copy `themes/classic` to `themes/<new>`, change its templates and `theme.css`, a
 DEBUG=1 .venv/bin/python manage.py test core
 ```
 
+## Deploy (IONOS, shared server)
+
+The server also hosts other sites, so LRS keeps to itself: its own Linux user `lrs`, everything under `/var/www/lrs` (`app/` = this repo, `venv/`, `.env`, `media/`, `acme/`), its own Postgres database `lrs` (local socket, no password), gunicorn on `/run/lrs/gunicorn.sock` (`deploy/lrs.service`) and one nginx file, `zz-lrs` (`deploy/nginx.conf`; read the notes at its top). Always `nginx -t` before `systemctl reload nginx`; never restart nginx.
+
+Update the code:
+```
+sudo -u lrs git -C /var/www/lrs/app pull
+sudo -u lrs bash -c 'cd /var/www/lrs/app && set -a && . ../.env && set +a && \
+  ../venv/bin/pip install -qr requirements.txt && ../venv/bin/python manage.py migrate && \
+  ../venv/bin/python manage.py collectstatic --noinput'
+systemctl reload lrs
+```
+
 ## Not yet built (phase 2)
 
-- Two-step login for admins (django-otp)
-- Newsletter: subscribers, sign-up, sending
-- Calendar and committee calendar
-- Redirects from old URLs (`/concert-details/<id>/` and so on). Wagtail's Redirects module is installed; the importer should create these.
-- Spam protection on the contact form
-- Production deployment on the IONOS VPS (gunicorn systemd unit, Postgres database, certbot)
+See "Next steps" in `CLAUDE.md`: two-step login for admins, calendars, newsletter, singers' accounts, switch-over.

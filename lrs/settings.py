@@ -82,6 +82,7 @@ if env("POSTGRES_DB"):
         "PORT": env("POSTGRES_PORT", "5432"),
         "CONN_MAX_AGE": 60,
     }}
+    INSTALLED_APPS.append("django.contrib.postgres")  # Wagtail's search uses Postgres full-text search
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 

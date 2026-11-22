@@ -1,0 +1,22 @@
+# Gunicorn for the LRS website. On the server: /etc/systemd/system/lrs.service
+# Runs as its own user, on a socket file (no port to clash with other sites).
+[Unit]
+Description=Gunicorn for the LRS website (Wagtail)
+After=network.target postgresql.service
+
+[Service]
+User=lrs
+Group=lrs
+WorkingDirectory=/var/www/lrs/app
+EnvironmentFile=/var/www/lrs/.env
+RuntimeDirectory=lrs
+ExecStart=/var/www/lrs/venv/bin/gunicorn --workers 2 --timeout 60 --bind unix:/run/lrs/gunicorn.sock lrs.wsgi:application
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

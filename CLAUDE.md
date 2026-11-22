@@ -4,7 +4,8 @@
 
 ## Decisions made by the owner (2026-11-21)
 - Stay with Python: Wagtail 8.1 on Django 6.1. Postgres in production, SQLite locally.
-- Stay on the existing IONOS VPS. No new paid services; everything is open source / free tier.
+- Host on IONOS. No new paid services; everything is open source / free tier.
+- **Changed 2026-11-22:** production moves to the owner's *other* IONOS server (more resources), not the old site's VPS. It already runs several other sites on nginx + gunicorn: **they must not be affected in any way.** The trial deploy (step 3) goes there too, on a test address, so the choir's main website contact can preview it.
 - Video = YouTube embeds only (privacy-enhanced, load-on-click). Audio samples are self-hosted.
 - One maintainer (the owner). Admin users only create and edit content, mainly concert listings.
 - Goals: fewer files, faster, more secure, top-quality admin editing and concert pages, and a design layer that can be swapped without touching content.
@@ -35,13 +36,14 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 - **Gallery page** (`/gallery/`), plus `robots.txt` and the Google Search Console verification file at the old site's addresses (`lrs/urls.py`).
 - **Homepage matches the live site**: header shows the choir's name as text (no logo image; the live site has none); heading, strapline and `quote` field carry the live text; new "Image beside text" block holds the choir photo and intro. The two homepage images (score background, choir photo) are in the local DB only (see step 7).
 - **Photo privacy**: every uploaded image is re-saved without EXIF/XMP (GPS, camera, owner), turned upright first (`core/models.py`, end). Wagtail would otherwise copy GPS into every served rendition. The importer goes through the same path.
+- **Trial deploy** on the shared IONOS server (layout and update steps in README, "Deploy"). Found and fixed one server-only bug: Postgres needs `django.contrib.postgres` for Wagtail search (`lrs/settings.py`). Outgoing email to Gmail works from the server. The Contact page has no "to" address yet, so messages are stored but not emailed.
 - **Contact-form spam protection** (`ContactPage` in `core/models.py`): a hidden "website" trap box plus a signed time stamp (under 3 seconds = bot; over 2 days = "please press Send again"). Spam gets the normal thank-you page but is not stored or emailed. Both checks sit outside the Wagtail form, so editors can change the form fields freely.
 
 ## Next steps (agreed order, 2026-11-21)
 1. ~~Contact-form spam protection~~ (done 2026-11-22).
-2. Two-step login for admins (django-otp).
-3. Consider a trial deploy on IONOS here, to catch server-only problems (e.g. blocked outgoing email) early.
-4. Calendars: public + committee; then repoint the temporary `/calendar/` and `/committee-calendar/` redirects.
+2. Two-step login for admins (django-otp). **Parked 2026-11-22: awaiting committee approval.** Proposed plan: required for everyone with admin access (not singers), QR-code setup on first login (adds the `qrcode` package), 10 backup codes, a `manage.py` command to reset a locked-out admin, code page under the nginx login rate limit.
+3. ~~Trial deploy on the new IONOS server~~ (done 2026-11-22): https://choir.tywynwebsites.co.uk, behind an nginx password (user `choir`). Next: show it to the choir's website contact.
+4. Calendars: public + committee; then repoint the temporary `/calendar/` and `/committee-calendar/` redirects. **Parked 2026-11-22: committee to decide** whether to use a calendar on the new site or keep using Google Calendar in the choir's Google account (if Google: link or load-on-click embed, like YouTube, and repoint the redirects to it).
 5. Newsletter (largest job): subscribers, sign-up, sending (Gmail SMTP for now, maybe Amazon SES later); decide what to do with the old site's 14 newsletter files in `media/newsletters/` (not imported yet); repoint the `/newsletters/` redirect.
 6. Singers' accounts: bulk creation (needs the owner's list of names and emails).
 7. Production deploy on IONOS (gunicorn unit, Postgres, certbot), trial run on a test address, admin sign-off, DNS switch with the old site kept as a fallback. On production also:
@@ -52,6 +54,7 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 ## Working here
 - Local: `export DEBUG=1`, `.venv/bin/python manage.py runserver`; tests: `DEBUG=1 .venv/bin/python manage.py test core` (keep them passing; without `DEBUG=1` or `SECRET_KEY` settings refuse to load).
 - Import: the old site's local DB is unreachable (its `.env` points at a retired AWS database). Real data must come from `dumpdata` run on the live server (`/var/www/LRS`; command in README), copied to `~/Downloads`, imported into a fresh local DB with `manage.py lrs_setup --import <export.json> --media <old media folder>`, then the copies deleted. The export holds password hashes: never commit it.
+- Copying the local DB to the server (trial only): dump `contenttypes auth.permission` to one file and everything else to a second (excluding `sessions`, `wagtailsearch`, `wagtailimages.rendition`, `wagtailcore.referenceindex`, `wagtailcore.pagelogentry`, `wagtailadmin.editingsession`), keep plain ids (Wagtail's natural keys break on the root collection), then on the server `flush` with `inhibit_post_migrate=True`, load file 1, then file 2, then `migrate`, `update_index`, `rebuild_references_index`, `collectstatic`. Delete both export files afterwards (password hashes).
 - Local Python is from python.org; if TLS fails with CERTIFICATE_VERIFY_FAILED, run `/Applications/Python 3.12/Install Certificates.command`.
 - Commit only when the owner asks. This is its own git repo, separate from `../LRS`.
 
