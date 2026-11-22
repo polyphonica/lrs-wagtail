@@ -316,8 +316,11 @@ class SiteTests(TestCase):
         settings.save()
         for email in ["a@example.org", "b@example.org", "c@example.org", "d@example.org"]:
             Subscriber.objects.create(email=email)
+        picture = WagtailImage(title="flyer", file=ImageFile(BytesIO(self.png()), name="flyer.png"))
+        picture.save()
+        embed = f'<embed embedtype="image" format="left" id="{picture.id}" alt="Flyer"/>'
         issue = NewsletterIndexPage.objects.get().add_child(instance=NewsletterPage(
-            title="Spring news", body='<p>See <a href="/concerts/">our concerts</a>.</p>'))
+            title="Spring news", body=f'<p>See <a href="/concerts/">our concerts</a>.</p>{embed}{embed}'))
         send_url = f"/admin/newsletter/{issue.id}/send/"
         # Editors can write newsletters but not send them; sending needs publish rights.
         self.client.force_login(self.users["Editors"])
@@ -349,6 +352,17 @@ class SiteTests(TestCase):
         self.assertIn(unsubscribe, html)
         self.assertEqual(message.extra_headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click")
         self.assertContains(self.client.get(send_url), "Waiting: 1")
+        # Pictures travel inside the email, shown in place (no "download pictures" step in Outlook).
+        sent = message.message()
+        self.assertEqual(sent.get_content_type(), "multipart/alternative")
+        related = sent.get_payload()[1]
+        self.assertEqual(related.get_content_type(), "multipart/related")
+        html_part, picture_part = related.get_payload()
+        self.assertIn('src="cid:picture1@lrs"', html_part.get_content())
+        self.assertNotIn("/media/images/", html_part.get_content())
+        self.assertEqual(picture_part["Content-ID"], "<picture1@lrs>")
+        self.assertEqual(picture_part.get_content_type(), "image/png")
+        self.assertEqual(len(related.get_payload()), 2)  # the same picture twice is carried once
         # Unsubscribing removes their waiting email; the archive lists sent newsletters.
         Subscriber.objects.get(email="d@example.org").delete()
         self.assertContains(self.client.get(send_url), "Waiting: 0")

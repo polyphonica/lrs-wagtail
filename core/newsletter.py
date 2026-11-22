@@ -1,6 +1,7 @@
 """Newsletter: sign-up, unsubscribe, the emails, and sending in batches (see the note in models.py)."""
 import html as html_lib
 import logging
+import mimetypes
 import re
 import smtplib
 from datetime import timedelta
@@ -8,6 +9,7 @@ from datetime import timedelta
 from django import forms
 from django.conf import settings
 from django.core import mail, signing
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -144,15 +146,63 @@ def contact_email():
     return SiteSettings.for_site(site).contact_email if site else ""
 
 
-def build_message(email, to, unsubscribe_link, reply_to="", connection=None):
+class NewsletterEmail(mail.EmailMultiAlternatives):
+    """An email whose pictures travel inside it ("related" parts the HTML refers to as cid:...), so they
+    show as soon as it opens; linked pictures are hidden by Outlook and others until the reader asks."""
+    def __init__(self, *args, pictures=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pictures = pictures  # (content id, bytes, MIME type)
+
+    def message(self, **kwargs):
+        message = super().message(**kwargs)
+        html = message.get_body(("html",))
+        for cid, data, mime_type in self.pictures:
+            html.add_related(data, *mime_type.split("/"), cid=f"<{cid}>", disposition="inline")
+        return message
+
+
+MAX_PICTURES_BYTES = 5 * 1024 * 1024  # beyond this, later pictures stay as links (mail servers refuse huge emails)
+
+
+def built_in_pictures(html, cache):
+    """Swap the site's pictures in the HTML for ones carried in the email. A picture whose file has
+    gone (e.g. remade since) stays a link. `cache` keeps files read once per batch."""
+    pictures, cids, total = [], {}, 0
+
+    def swap(match):
+        nonlocal total
+        name = match[2]
+        if name in cids:  # the same picture twice: carried once
+            return f'src="cid:{cids[name]}"'
+        if name not in cache:
+            try:
+                with default_storage.open(name) as f:
+                    cache[name] = f.read()
+            except OSError:
+                cache[name] = None
+        data = cache[name]
+        mime_type = mimetypes.guess_type(name)[0] or ""
+        if not data or not mime_type.startswith("image/") or total + len(data) > MAX_PICTURES_BYTES:
+            return match[0]
+        cids[name] = cid = f"picture{len(pictures) + 1}@lrs"
+        pictures.append((cid, data, mime_type))
+        total += len(data)
+        return f'src="cid:{cid}"'
+
+    return re.sub(r'src="(' + re.escape(site_url()) + r'/media/(images/[^"]+))"', swap, html), pictures
+
+
+def build_message(email, to, unsubscribe_link, reply_to="", connection=None, cache=None):
     """`email` is render_newsletter()'s result or a NewsletterSend (same fields)."""
     get = email.get if isinstance(email, dict) else lambda k: getattr(email, k)
-    message = mail.EmailMultiAlternatives(
+    html, pictures = built_in_pictures(get("html").replace(UNSUBSCRIBE, unsubscribe_link),
+                                       {} if cache is None else cache)
+    message = NewsletterEmail(
         get("subject"), get("text").replace(UNSUBSCRIBE, unsubscribe_link), to=[to],
-        reply_to=[reply_to] if reply_to else None, connection=connection,
+        reply_to=[reply_to] if reply_to else None, connection=connection, pictures=pictures,
         headers={"List-Unsubscribe": f"<{unsubscribe_link}>",  # the unsubscribe button Gmail and others show
                  "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"})
-    message.attach_alternative(get("html").replace(UNSUBSCRIBE, unsubscribe_link), "text/html")
+    message.attach_alternative(html, "text/html")
     return message
 
 
@@ -191,11 +241,12 @@ def send_pending(batch=None, daily_limit=None):
     if not pending:
         return sent
     reply_to = contact_email()
+    cache = {}  # picture files, read once per batch
     with mail.get_connection() as connection:
         for delivery in pending:
             try:
                 build_message(delivery.send, delivery.subscriber.email, unsubscribe_url(delivery.subscriber),
-                              reply_to, connection).send()
+                              reply_to, connection, cache).send()
             except Exception as error:
                 delivery.failures += 1
                 delivery.error = str(error)[:300]
