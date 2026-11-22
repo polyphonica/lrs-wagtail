@@ -34,6 +34,7 @@ h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); }
 h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
 h3 { font-size: 1.3rem; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+[id] { scroll-margin-top: 6rem; } /* a link to a section (e.g. /about/#our-musical-director) stops below the sticky header */
 .wrap { max-width: var(--wrap); margin-inline: auto; padding-inline: 16px; }
 @media (min-width: 40rem) { .wrap { padding-inline: var(--gap); } }
 .narrow { max-width: calc(var(--narrow) + 2 * var(--gap)); }
@@ -128,7 +129,7 @@ h3 { font-size: 1.3rem; }
 figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .gallery-grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); }
 .gallery-grid img { border-radius: 6px; aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
-.image-text { display: grid; gap: var(--gap); align-items: center; margin: 2rem 0; }
+.image-text { display: grid; gap: var(--gap); align-items: start; margin: 2rem 0; }
 .image-text img { border-radius: var(--radius); width: 100%; }
 @media (min-width: 50rem) {
   /* Wider than the text column, like the old homepage: picture and text side by side; link cards. */
