@@ -57,7 +57,13 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 - Import: the old site's local DB is unreachable (its `.env` points at a retired AWS database). Real data must come from `dumpdata` run on the live server (`/var/www/LRS`; command in README), copied to `~/Downloads`, imported into a fresh local DB with `manage.py lrs_setup --import <export.json> --media <old media folder>`, then the copies deleted. The export holds password hashes: never commit it.
 - Copying the local DB to the server (trial only): dump `contenttypes auth.permission` to one file and everything else to a second (excluding `sessions`, `wagtailsearch`, `wagtailimages.rendition`, `wagtailcore.referenceindex`, `wagtailcore.pagelogentry`, `wagtailadmin.editingsession`), keep plain ids (Wagtail's natural keys break on the root collection), then on the server `flush` with `inhibit_post_migrate=True`, load file 1, then file 2, then `migrate`, `update_index`, `rebuild_references_index`, `collectstatic`. Delete both export files afterwards (password hashes).
 - Local Python is from python.org; if TLS fails with CERTIFICATE_VERIFY_FAILED, run `/Applications/Python 3.12/Install Certificates.command`.
-- Commit only when the owner asks. This is its own git repo, separate from `../LRS`.
+- Commit only when the owner asks. This is its own git repo, separate from `../LRS`. The owner tries a change first (locally or on the preview), then says "commit and push": `git fetch` and check `origin/main` first, commit on a short-lived branch, fast-forward `main`, delete the branch, push. The owner works from more than one computer, so keep everything needed in this repo.
+- Parked steps (2, 4) wait for the committee: don't start one until the owner says it has decided.
+
+## Server (shared IONOS, also runs the owner's other sites)
+- Log in: `ssh root@tywynwebsites.co.uk` (the same server). Key login only. Each computer needs its own key: `ssh-keygen -t ed25519 -f ~/.ssh/ionos_lrs -C lrs-deploy`, `ssh-copy-id -i ~/.ssh/ionos_lrs.pub root@tywynwebsites.co.uk`, `ssh-add --apple-use-keychain ~/.ssh/ionos_lrs`, all typed in Terminal: password and passphrase prompts don't receive input through Claude Code's `!` shell.
+- **Never affect the other sites.** Survey read-only first and get the owner's go-ahead before changing anything outside `/var/www/lrs`. Before and after any nginx change, check every other site from outside (status code of http and https for each `server_name` in `/etc/nginx/sites-enabled/`, plus which certificate answers an unknown name: it must stay recorder-ed.com) and compare. `nginx -t`, then `systemctl reload nginx`; never restart; no system package upgrades. A copy of nginx's settings from before LRS: `/root/nginx-backup-2026-11-22.tgz`.
+- Layout and update steps: README, "Deploy". Preview password file: `/etc/nginx/lrs-preview.htpasswd` (user `choir`).
 
 ## Known issues in the old site
 - `../LRS/choir/settings.py` (tracked in git) contains a hard-coded database password. Flagged to the owner; to be fixed when they are back in that project.
@@ -65,4 +71,4 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 - About 52 images embedded in old page text (`media/uploads/`) are dropped by the importer; some pages may need pictures re-added.
 
 ## Links
-- Committee proposal: https://claude.ai/artifact/BGJZprvzmgP39BeMRMU2gW (Claude Doc).
+- Committee proposal: https://claude.ai/artifact/BGJZprvzmgP39BeMRMU2gW (Claude Doc, the master). A copy is in `docs/committee-proposal.md` (exported 2026-11-22; export again after editing the doc). It still says the site runs on the old site's IONOS server; production now goes on the shared server (see Decisions).
