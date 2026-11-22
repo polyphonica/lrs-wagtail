@@ -21,7 +21,7 @@ from wagtail.documents.models import Document
 from wagtail.models import Collection
 from wagtail.rich_text import RichText
 
-from core.blocks import AudioBlock, YouTubeBlock, youtube_id
+from core.blocks import AudioBlock, CardBlock, YouTubeBlock, youtube_id
 from core.models import (ConcertIndexPage, ConcertPage, ContactPage, GalleryPage, HomePage, NewsletterIndexPage,
                          NewsletterPage, NewsletterSend, SiteSettings, Subscriber)
 from core.newsletter import send_pending
@@ -257,6 +257,32 @@ class SiteTests(TestCase):
         response = self.client.get("/concerts/past/")
         self.assertEqual(upload.renditions.count(), made)  # nothing left for the visitor to make
         self.assertContains(response, "big")
+
+    def test_link_cards_like_the_choir_section(self):
+        from wagtail.models import Page
+        home = HomePage.objects.get()
+        about, faq = (Page.objects.get(slug=s) for s in ["about", "faq"])
+        block = home.body.stream_block.child_blocks["cards"]
+        home.body = [("cards", block.to_python({"heading": "The Choir", "cards": [
+            {"label": "Musical Director", "page": about.id, "url": "", "description": "About our Musical Director",
+             "anchor": "musical-director"},
+            {"label": "Frequently Asked Questions", "page": faq.id, "url": "", "description": "Quick information",
+             "anchor": ""},
+            {"label": "Elsewhere", "page": None, "url": "https://example.org/", "description": "", "anchor": ""},
+        ]}))]
+        home.save_revision().publish()
+        html = self.client.get("/").content.decode()
+        self.assertIn('id="the-choir">The Choir</h2>', html)
+        self.assertIn('<a class="choir-card" href="/about/#musical-director"><strong>Musical Director</strong>', html)
+        self.assertIn('href="/faq/"><strong>Frequently Asked Questions</strong><span>Quick information</span>', html)
+        self.assertIn('href="https://example.org/"><strong>Elsewhere</strong></a>', html)
+        # A heading block gets the id a card's anchor points to.
+        about.specific.body = [("heading", "Musical Director")]
+        about.specific.save_revision().publish()
+        self.assertContains(self.client.get("/about/"), 'id="musical-director"')
+        # A card must go somewhere.
+        with self.assertRaises(StructBlockValidationError):
+            CardBlock().clean({"label": "Nowhere", "page": None, "url": "", "description": "", "anchor": ""})
 
     def test_image_beside_text_block(self):
         image = WagtailImage(title="choir", file=ImageFile(BytesIO(self.png()), name="choir.png"))

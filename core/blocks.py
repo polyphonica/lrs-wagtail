@@ -126,6 +126,28 @@ class ButtonBlock(blocks.StructBlock):
         icon = "link"
 
 
+class CardBlock(ButtonBlock):
+    """One card: a title linking to a page (or another website), with a line about it."""
+    label = blocks.CharBlock(label="Title")
+    description = blocks.CharBlock(required=False)
+    anchor = blocks.CharBlock(required=False, help_text="Optional: a section of the page, e.g. musical-director "
+                                                         "(the heading's words, lower case, joined by hyphens).")
+
+    class Meta:
+        icon = "link"
+        label = "Card"
+
+
+class CardGridBlock(blocks.StructBlock):
+    """A set of link cards in two columns, like "The Choir" on the old home page."""
+    heading = blocks.CharBlock(required=False, help_text="e.g. The Choir")
+    cards = blocks.ListBlock(CardBlock(), min_num=1)
+
+    class Meta:
+        icon = "grip"
+        label = "Link cards"
+
+
 class FAQBlock(blocks.StructBlock):
     question = blocks.CharBlock()
     answer = blocks.RichTextBlock(features=TEXT_FEATURES)
@@ -162,5 +184,6 @@ class ConcertBody(CommonBody):
 class PageBody(CommonBody):
     heading = blocks.CharBlock(icon="title", form_classname="title")
     image_text = ImageTextBlock()
+    cards = CardGridBlock()
     faq = FAQBlock()
     link_card = LinkCardBlock()

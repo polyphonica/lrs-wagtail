@@ -131,8 +131,9 @@ figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .image-text { display: grid; gap: var(--gap); align-items: center; margin: 2rem 0; }
 .image-text img { border-radius: var(--radius); width: 100%; }
 @media (min-width: 50rem) {
-  /* Wider than the text column, like the old homepage: picture and text side by side. */
-  .image-text { --w: min(calc(var(--wrap) - 2 * var(--gap)), calc(100vw - 4rem)); width: var(--w); margin-inline: calc((100% - var(--w)) / 2); grid-template-columns: 1fr 1fr; }
+  /* Wider than the text column, like the old homepage: picture and text side by side; link cards. */
+  .image-text, .cards { --w: min(calc(var(--wrap) - 2 * var(--gap)), calc(100vw - 4rem)); width: var(--w); margin-inline: calc((100% - var(--w)) / 2); }
+  .image-text { grid-template-columns: 1fr 1fr; }
   .image-text.image-right figure { order: 2; }
 }
 .image-text figure { margin: 0; }
@@ -158,6 +159,14 @@ figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .faq { border-bottom: 1px solid var(--rule); padding: 1rem 0; }
 .faq summary { cursor: pointer; font-weight: 600; font-size: 1.1rem; }
 .faq .prose { margin-top: 0.75rem; }
+.cards { margin-block: 2.5rem; }
+.cards .block-heading { margin-top: 0; text-align: center; }
+.card-grid { display: grid; gap: 1rem var(--gap); }
+@media (min-width: 40rem) { .card-grid { grid-template-columns: 1fr 1fr; } }
+.choir-card { display: grid; align-content: start; gap: 0.3rem; padding: 1.25rem 1.5rem; background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--gold); border-radius: var(--radius); text-decoration: none; color: var(--ink); transition: transform .15s, box-shadow .15s; }
+.choir-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgb(0 0 0 / 0.08); }
+.choir-card strong { font-family: var(--serif); font-size: 1.2rem; color: var(--accent); }
+.choir-card span { color: var(--ink-soft); font-size: 0.95rem; }
 .link-card { display: grid; gap: 0.25rem; padding: 1rem 1.25rem; margin: 0.75rem 0; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); text-decoration: none; color: var(--ink); }
 .link-card strong { color: var(--accent); }
 .link-card span { color: var(--ink-soft); font-size: 0.95rem; }
