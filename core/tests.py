@@ -179,6 +179,7 @@ class SiteTests(TestCase):
         self.assertEqual(contact.get_submissions().get().get_data()["message"], "Hello")
         self.assertNotIn("started", mail.outbox[0].body)
         self.assertNotIn("website", mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].reply_to, ["ann@example.org"])  # Reply answers the visitor
 
     def test_password_reset_by_email(self):
         singer = self.users["Singers"]

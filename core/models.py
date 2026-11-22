@@ -15,6 +15,7 @@ from django.template.response import TemplateResponse
 from django.utils import timezone
 from modelcluster.fields import ParentalKey
 from PIL import Image as PILImage, ImageOps
+from wagtail.admin.mail import send_mail
 from wagtail.admin.panels import FieldPanel, FieldRowPanel, InlinePanel, MultiFieldPanel
 from wagtail.contrib.forms.models import AbstractEmailForm, AbstractFormField
 from wagtail.contrib.forms.panels import FormSubmissionsPanel
@@ -264,6 +265,15 @@ class ContactPage(AbstractEmailForm):
                 context["form"] = form
                 return TemplateResponse(request, self.get_template(request), context)
         return super().serve(request, *args, **kwargs)
+
+    def send_mail(self, form):
+        # Pressing Reply answers the visitor: the first email-type field they filled in
+        # (found by type, so editors can rename or reorder the form fields).
+        email_fields = [f.clean_name for f in self.get_form_fields() if f.field_type == "email"]
+        reply_to = next((form.cleaned_data[n] for n in email_fields if form.cleaned_data.get(n)), None)
+        addresses = [x.strip() for x in self.to_address.split(",") if x.strip()]
+        send_mail(self.subject, self.render_email(form), addresses, self.from_address,
+                  reply_to=[reply_to] if reply_to else None)
 
 
 # --- Photo privacy ------------------------------------------------------------
