@@ -351,7 +351,9 @@ class SiteTests(TestCase):
         self.assertTrue(unsubscribe.startswith("https://choir.example/newsletter/unsubscribe/"))
         self.assertIn(unsubscribe, html)
         self.assertEqual(message.extra_headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click")
-        self.assertContains(self.client.get(send_url), "Waiting: 1")
+        waiting = self.client.get(send_url)
+        self.assertContains(waiting, "Waiting: 1")
+        self.assertContains(waiting, "window.location.reload")  # the page keeps itself up to date
         # Pictures travel inside the email, shown in place (no "download pictures" step in Outlook).
         sent = message.message()
         self.assertEqual(sent.get_content_type(), "multipart/alternative")
@@ -365,7 +367,9 @@ class SiteTests(TestCase):
         self.assertEqual(len(related.get_payload()), 2)  # the same picture twice is carried once
         # Unsubscribing removes their waiting email; the archive lists sent newsletters.
         Subscriber.objects.get(email="d@example.org").delete()
-        self.assertContains(self.client.get(send_url), "Waiting: 0")
+        done = self.client.get(send_url)
+        self.assertContains(done, "Waiting: 0")
+        self.assertNotContains(done, "window.location.reload")  # and stops once all are sent
         self.assertContains(self.client.get("/newsletters/"), "Spring news")
         self.assertEqual(self.client.get(issue.url).status_code, 200)
 

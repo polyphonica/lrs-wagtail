@@ -1,4 +1,8 @@
 {% extends "wagtailadmin/generic/base.html" %}
+{% block extra_js %}{{ block.super }}{% if progress.waiting %}
+{# While emails are waiting, reload every 15 seconds so the numbers keep up with the sending. #}
+<script>setTimeout(function () { window.location.reload(); }, 15000);</script>
+{% endif %}{% endblock %}
 {% block main_content %}
 <div class="help-block help-info">
   <p>Newsletters go out in small batches, at most {{ daily_limit }} emails a day (Gmail's limit is about 500).
@@ -16,7 +20,7 @@
   <p>Sending started {{ sent.started_at|date:"j M Y, H:i" }}{% if sent.started_by %} by {{ sent.started_by.get_full_name|default:sent.started_by.get_username }}{% endif %}, to {{ sent.recipients }} subscribers.</p>
   <ul>
     <li>Sent: {{ progress.sent }}</li>
-    <li>Waiting: {{ progress.waiting }}</li>
+    <li>Waiting: {{ progress.waiting }}{% if progress.waiting %} (about {{ batch }} go out each minute; this page updates by itself){% endif %}</li>
     {% if progress.failed %}<li>Failed: {{ progress.failed }} (check these addresses in Subscribers)</li>{% endif %}
   </ul>
   <p>Each newsletter is sent once. To send a correction, copy the page, change it and send the copy.</p>

@@ -63,6 +63,7 @@ def send_view(request, page_id):
         "page": page, "page_title": f"Send: {page.title}", "header_icon": "mail",
         "sent": sent, "progress": newsletter.progress(sent) if sent else None, "subscribers": count,
         "daily_limit": settings.NEWSLETTER_DAILY_LIMIT,
+        "batch": settings.NEWSLETTER_BATCH,
         "days": -(-count // settings.NEWSLETTER_DAILY_LIMIT) if count else 0,
         "ready": page.live and not page.has_unpublished_changes,
     })
