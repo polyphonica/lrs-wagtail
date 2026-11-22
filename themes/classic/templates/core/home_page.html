@@ -12,7 +12,7 @@
 {% if upcoming %}
 <section class="wrap section">
   <div class="section-head"><h2>Forthcoming concerts</h2><a href="/concerts/">All concerts →</a></div>
-  <div class="concert-grid">{% for concert in upcoming %}{% include "includes/concert_card.html" %}{% endfor %}</div>
+  <div class="concert-grid concert-grid-compact">{% for concert in upcoming %}{% include "includes/concert_card.html" %}{% endfor %}</div>
 </section>
 {% endif %}
 {% if page.body %}<section class="wrap narrow section">{% for block in page.body %}{% include "includes/block.html" %}{% endfor %}</section>{% endif %}

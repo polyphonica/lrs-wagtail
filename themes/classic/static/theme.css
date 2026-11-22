@@ -87,6 +87,13 @@ h3 { font-size: 1.3rem; }
 .concert-date { color: var(--accent); font-weight: 600; font-size: 0.9rem; margin: 0; }
 .concert-venue { margin: 0; color: var(--ink-soft); }
 .concert-summary { margin: 0.6rem 0 0; font-size: 0.975rem; }
+/* Home page: smaller cards */
+.concert-grid-compact { grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 17rem)); gap: 1.25rem; }
+.concert-grid-compact .concert-card-img { aspect-ratio: 2 / 1; }
+.concert-grid-compact .concert-card-body { padding: 0.75rem 0.9rem 0.9rem; font-size: 0.9rem; line-height: 1.5; }
+.concert-grid-compact h3 { font-size: 1.05rem; }
+.concert-grid-compact .concert-date { font-size: 0.8rem; }
+.concert-grid-compact .concert-summary { font-size: 0.875rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--rule); }
 .tabs a { padding: 0.6rem 1rem; text-decoration: none; color: var(--ink-soft); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs a[aria-current] { color: var(--accent); border-color: var(--accent); font-weight: 600; }
