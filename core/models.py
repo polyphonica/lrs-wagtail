@@ -1,9 +1,12 @@
 """The stable content model. Themes only read from these; they never define content."""
 import logging
+import re
 import time
+from html import unescape
 from io import BytesIO
 from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from django.core import signing
 from django.core.files.base import ContentFile
@@ -11,12 +14,14 @@ from django.core.paginator import Paginator
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.http import HttpResponse
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.utils.text import Truncator
 from modelcluster.fields import ParentalKey
 from PIL import Image as PILImage, ImageOps
 from wagtail.admin.mail import send_mail
-from wagtail.admin.panels import FieldPanel, FieldRowPanel, InlinePanel, MultiFieldPanel
+from wagtail.admin.panels import FieldPanel, FieldRowPanel, InlinePanel, MultiFieldPanel, TitleFieldPanel
 from wagtail.contrib.forms.models import AbstractEmailForm, AbstractFormField
 from wagtail.contrib.forms.panels import FormSubmissionsPanel
 from wagtail.contrib.routable_page.models import RoutablePageMixin, path
@@ -87,7 +92,7 @@ class HomePage(BasePage):
                                             FieldPanel("image"), FieldPanel("body")]
     max_count = 1
     subpage_types = ["core.ConcertIndexPage", "core.StandardPage", "core.ComposersPage",
-                     "core.GalleryPage", "core.DocumentsPage", "core.ContactPage"]
+                     "core.GalleryPage", "core.DocumentsPage", "core.ContactPage", "core.NewsletterIndexPage"]
 
     def get_context(self, request, *args, **kwargs):
         context = super().get_context(request, *args, **kwargs)
@@ -201,6 +206,41 @@ class DocumentsPage(BasePage):
         return context
 
 
+class FormGuard:
+    """Spam protection for public forms, no outside service. Two checks that people never notice:
+    - a "website" box hidden from people (screen readers and keyboards skip it too); bots fill it in;
+    - a signed time stamp in the form; a reply sent within seconds of the page loading is a bot.
+    Both stay outside the real form, so they are never stored or emailed. Spam gets the normal
+    thank-you reply (so bots learn nothing) but nothing is saved or sent."""
+    TRAP_FIELD = "website"
+    STARTED_FIELD = "started"
+    MIN_SECONDS = 3
+    MAX_SECONDS = 2 * 24 * 60 * 60
+
+    def __init__(self, salt):
+        self.salt = salt
+
+    def context(self):
+        """Template variables for includes/form_guard.html."""
+        return {"trap_field": self.TRAP_FIELD, "started_field": self.STARTED_FIELD,
+                "started": signing.dumps(time.time(), salt=self.salt)}
+
+    def check(self, data):
+        """Return "spam", "expired" (a person who left the page open too long) or "" (fine)."""
+        if data.get(self.TRAP_FIELD):
+            return "spam"
+        try:
+            started = signing.loads(data.get(self.STARTED_FIELD, ""), salt=self.salt, max_age=self.MAX_SECONDS)
+        except signing.SignatureExpired:
+            return "expired"
+        except signing.BadSignature:
+            return "spam"
+        return "spam" if time.time() - started < self.MIN_SECONDS else ""
+
+
+EXPIRED_FORM = "This page was open for a long time. Please press Send again."
+
+
 class ContactFormField(AbstractFormField):
     page = ParentalKey("ContactPage", on_delete=models.CASCADE, related_name="form_fields")
 
@@ -219,48 +259,23 @@ class ContactPage(AbstractEmailForm):
     ]
     max_count = 1
     subpage_types = []
-
-    # Spam protection, no outside service. Two checks that people never notice:
-    # - a "website" box hidden from people (screen readers and keyboards skip it too); bots fill it in;
-    # - a signed time stamp in the form; a reply sent within seconds of the page loading is a bot.
-    # Both stay outside the Wagtail form, so they are never stored or emailed. Spam gets the normal
-    # thank-you page (so bots learn nothing) but is not saved or sent.
-    TRAP_FIELD = "website"
-    STARTED_FIELD = "started"
-    MIN_SECONDS = 3
-    MAX_SECONDS = 2 * 24 * 60 * 60
-    SIGNING_SALT = "lrs.contact"
-
-    def spam_check(self, data):
-        """Return "spam", "expired" (a person who left the page open too long) or "" (fine)."""
-        if data.get(self.TRAP_FIELD):
-            return "spam"
-        try:
-            started = signing.loads(data.get(self.STARTED_FIELD, ""), salt=self.SIGNING_SALT,
-                                    max_age=self.MAX_SECONDS)
-        except signing.SignatureExpired:
-            return "expired"
-        except signing.BadSignature:
-            return "spam"
-        return "spam" if time.time() - started < self.MIN_SECONDS else ""
+    guard = FormGuard("lrs.contact")  # the trap box and time stamp are outside the Wagtail form
 
     def get_context(self, request, *args, **kwargs):
         context = super().get_context(request, *args, **kwargs)
-        context["trap_field"] = self.TRAP_FIELD
-        context["started_field"] = self.STARTED_FIELD
-        context["started"] = signing.dumps(time.time(), salt=self.SIGNING_SALT)
+        context.update(self.guard.context())
         return context
 
     def serve(self, request, *args, **kwargs):
         if request.method == "POST":
-            verdict = self.spam_check(request.POST)
+            verdict = self.guard.check(request.POST)
             if verdict == "spam":
                 logger.info("Contact form: spam blocked")
                 return self.render_landing_page(request, None, *args, **kwargs)
             if verdict == "expired":
                 form = self.get_form(request.POST, request.FILES, page=self, user=request.user)
                 form.is_valid()
-                form.add_error(None, "This page was open for a long time. Please press Send again.")
+                form.add_error(None, EXPIRED_FORM)
                 context = self.get_context(request)
                 context["form"] = form
                 return TemplateResponse(request, self.get_template(request), context)
@@ -274,6 +289,113 @@ class ContactPage(AbstractEmailForm):
         addresses = [x.strip() for x in self.to_address.split(",") if x.strip()]
         send_mail(self.subject, self.render_email(form), addresses, self.from_address,
                   reply_to=[reply_to] if reply_to else None)
+
+
+# --- Newsletter ------------------------------------------------------------------
+# People sign up on the Newsletter page and are only stored once they click the link in a
+# confirmation email. A newsletter is a page under it, written like any other page; sending
+# (admin: page menu → "Send newsletter") queues one delivery per subscriber, and the
+# `send_newsletters` command, run every minute on the server, sends them in small batches.
+# Sending logic and the emails themselves: core/newsletter.py.
+NEWSLETTER_FEATURES = [*TEXT_FEATURES, "h2", "image", "hr"]
+
+
+class Subscriber(models.Model):
+    SOURCES = [("form", "Sign-up form"), ("admin", "Added by an editor"), ("old-site", "Old website")]
+    email = models.EmailField(unique=True, help_text="Only add people who have asked to receive the newsletter.")
+    name = models.CharField(max_length=200, blank=True)
+    subscribed_at = models.DateTimeField(default=timezone.now, editable=False)
+    source = models.CharField(max_length=10, choices=SOURCES, default="admin", editable=False)
+
+    panels = [FieldPanel("email"), FieldPanel("name")]
+
+    class Meta:
+        ordering = ["email"]
+
+    def __str__(self):
+        return f"{self.name} <{self.email}>" if self.name else self.email
+
+    def clean(self):
+        self.email = self.email.strip().lower()  # before the unique check, so case can't make duplicates
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+
+class NewsletterIndexPage(RoutablePageMixin, BasePage):
+    """Sign-up form, and the archive of newsletters already sent."""
+    max_count = 1
+    subpage_types = ["core.NewsletterPage"]
+    guard = FormGuard("lrs.newsletter")
+
+    def get_context(self, request, *args, **kwargs):
+        context = super().get_context(request, *args, **kwargs)
+        context["newsletters"] = (NewsletterPage.objects.child_of(self).live().public()
+                                  .filter(send__isnull=False).select_related("send").order_by("-send__started_at"))
+        return context
+
+    @path("")
+    def signup(self, request):
+        from .newsletter import SignupForm, start_signup
+        form = SignupForm(request.POST or None)
+        if request.method == "POST":
+            verdict = self.guard.check(request.POST)
+            if verdict == "spam":
+                logger.info("Newsletter sign-up: spam blocked")
+                return self.render(request, context_overrides={"step": "check-email"})
+            if verdict == "expired":
+                form.is_valid()
+                form.add_error(None, EXPIRED_FORM)
+            elif form.is_valid():
+                start_signup(self, form.cleaned_data)
+                return self.render(request, context_overrides={"step": "check-email"})
+        return self.render(request, context_overrides={"step": "form", "form": form, **self.guard.context()})
+
+
+class NewsletterPage(Page):
+    body = RichTextField(features=NEWSLETTER_FEATURES)
+
+    content_panels = [TitleFieldPanel("title", help_text="Also the email's subject line."), FieldPanel("body")]
+    promote_panels = []
+    parent_page_types = ["core.NewsletterIndexPage"]
+    subpage_types = []
+    preview_modes = [("", "Web page"), ("email", "Email")]
+
+    @property
+    def intro(self):
+        """The start of the text: the summary in search results and link previews (the theme expects one)."""
+        return Truncator(" ".join(unescape(re.sub(r"<[^>]+>", " ", self.body)).split())).words(30)
+
+    def serve_preview(self, request, mode_name):
+        if mode_name == "email":
+            from .newsletter import render_newsletter
+            return HttpResponse(render_newsletter(self)["html"])
+        return super().serve_preview(request, mode_name)
+
+
+class NewsletterSend(models.Model):
+    """One sending of a newsletter, with a copy of exactly what went out. Kept apart from the page,
+    so editing or copying the page later never makes it look unsent."""
+    newsletter = models.OneToOneField(NewsletterPage, on_delete=models.CASCADE, related_name="send")
+    started_at = models.DateTimeField(default=timezone.now)
+    started_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    subject = models.CharField(max_length=255)
+    html = models.TextField()
+    text = models.TextField()
+    recipients = models.PositiveIntegerField(default=0)
+
+
+class NewsletterDelivery(models.Model):
+    """One email still to send, or sent. Deleted with the subscriber when they unsubscribe."""
+    send = models.ForeignKey(NewsletterSend, on_delete=models.CASCADE, related_name="deliveries")
+    subscriber = models.ForeignKey(Subscriber, on_delete=models.CASCADE, related_name="+")
+    sent_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    failures = models.PositiveSmallIntegerField(default=0)
+    error = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["send", "subscriber"], name="one_delivery_each")]
 
 
 # --- Photo privacy ------------------------------------------------------------

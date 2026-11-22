@@ -48,6 +48,7 @@
       {% if s.facebook %}<a href="{{ s.facebook }}">Facebook</a>{% endif %}
       {% if s.instagram %}<a href="{{ s.instagram }}">Instagram</a>{% endif %}
       {% if s.youtube %}<a href="{{ s.youtube }}">YouTube</a>{% endif %}
+      {% slugurl "newsletters" as newsletter_url %}{% if newsletter_url %}<a href="{{ newsletter_url }}">Newsletter</a>{% endif %}
     </p>
     {% if s.charity_number %}<p class="small">Registered charity {{ s.charity_number }}</p>{% endif %}
     {% endwith %}

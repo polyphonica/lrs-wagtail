@@ -1,0 +1,25 @@
+<!doctype html>
+{# Email HTML: one centred column, inline styles only (most mail programs ignore stylesheets). #}
+<html lang="en-GB">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ page.title }}</title></head>
+<body style="margin:0;padding:0;background:#faf7f2;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf7f2;">
+  <tr><td align="center" style="padding:24px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e6ded3;border-radius:10px;">
+      <tr><td style="background:#5b1a2b;color:#ffffff;padding:20px 28px;border-radius:10px 10px 0 0;font-family:Georgia,'Palatino Linotype',serif;font-size:20px;">
+        Liverpool Renaissance Singers
+      </td></tr>
+      <tr><td style="padding:28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#221c1a;">
+        <h1 style="font-family:Georgia,'Palatino Linotype',serif;font-weight:normal;font-size:26px;line-height:1.2;margin:0 0 20px;color:#5b1a2b;">{{ page.title }}</h1>
+        {{ body|safe }}
+      </td></tr>
+      <tr><td style="padding:20px 28px;border-top:1px solid #e6ded3;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#5e5550;">
+        <a href="{{ web_url }}" style="color:#5b1a2b;">Read this on the website</a><br>
+        You get this email because you signed up for the Liverpool Renaissance Singers newsletter.
+        <a href="{{ unsubscribe_url }}" style="color:#5b1a2b;">Unsubscribe</a>{% if site.charity_number %}<br>Registered charity {{ site.charity_number }}{% endif %}
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

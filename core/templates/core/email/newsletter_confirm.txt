@@ -1,0 +1,10 @@
+{% autoescape off %}Hello{% if name %} {{ name }}{% endif %},
+
+Thank you for signing up to the Liverpool Renaissance Singers newsletter. To confirm, open this link and press the button:
+
+{{ url }}
+
+The link works for {{ days }} days. If you didn't sign up, ignore this email: you won't be added to the list.
+
+Liverpool Renaissance Singers
+{% endautoescape %}

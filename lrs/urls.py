@@ -8,11 +8,14 @@ from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.contrib.sitemaps import Sitemap
 from wagtail.documents import urls as wagtaildocs_urls
 
+from core import newsletter
+
 ROBOTS = """User-agent: *
 Disallow: /admin/
 Disallow: /login/
 Disallow: /password-reset/
 Disallow: /members/
+Disallow: /newsletter/
 Sitemap: {}
 """
 # Proves ownership of the site to Google Search Console (same file the old site served).
@@ -43,6 +46,9 @@ urlpatterns = [
     path("password-reset/done/", auth_views.PasswordResetCompleteView.as_view(
         template_name="password_reset.html", extra_context={"step": "complete"}), name="password_reset_complete"),
     path("sitemap.xml", sitemap, {"sitemaps": {"pages": Sitemap}}),
+    # Links in newsletter emails (the sign-up form itself is on the Newsletter page).
+    path("newsletter/confirm/<str:token>/", newsletter.confirm, name="newsletter_confirm"),
+    path("newsletter/unsubscribe/<str:token>/", newsletter.unsubscribe, name="newsletter_unsubscribe"),
 ]
 
 if settings.DEBUG:

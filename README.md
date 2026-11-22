@@ -10,7 +10,7 @@ core/           the stable content model
   management/commands/lrs_setup.py   groups, collections, access rules, page tree, import from the old site
   tests.py
 themes/classic/ the design: templates + one CSS file + one small JS file
-deploy/         nginx site, gunicorn systemd unit and an example .env
+deploy/         nginx site, gunicorn and newsletter systemd units, and an example .env
 ```
 
 ## Run it locally
@@ -73,6 +73,8 @@ sudo -u lrs bash -c 'cd /var/www/lrs/app && set -a && . ../.env && set +a && \
   ../venv/bin/python manage.py collectstatic --noinput'
 systemctl reload lrs
 ```
+
+Newsletter sending (once): copy `deploy/lrs-newsletter.service` and `deploy/lrs-newsletter.timer` to `/etc/systemd/system/`, then `systemctl daemon-reload && systemctl enable --now lrs-newsletter.timer`. Check with `systemctl list-timers lrs-newsletter.timer` and `journalctl -u lrs-newsletter`.
 
 ## Not yet built (phase 2)
 

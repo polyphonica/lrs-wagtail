@@ -1,0 +1,33 @@
+{% extends "wagtailadmin/generic/base.html" %}
+{% block main_content %}
+<div class="help-block help-info">
+  <p>Newsletters go out in small batches, at most {{ daily_limit }} emails a day (Gmail's limit is about 500).
+  {% if days > 1 %}With {{ subscribers }} subscribers, sending takes {{ days }} days.{% endif %}</p>
+</div>
+
+<h2>1. Check it</h2>
+<p>Use <strong>Preview → Email</strong> in the editor, then send a test copy of the latest draft to yourself ({{ request.user.email|default:"no email address on your account" }}).</p>
+<form method="post">{% csrf_token %}
+  <button class="button button-secondary" name="action" value="test">Send me a test</button>
+</form>
+
+<h2 style="margin-top: 2rem">2. Send it</h2>
+{% if sent %}
+  <p>Sending started {{ sent.started_at|date:"j M Y, H:i" }}{% if sent.started_by %} by {{ sent.started_by.get_full_name|default:sent.started_by.get_username }}{% endif %}, to {{ sent.recipients }} subscribers.</p>
+  <ul>
+    <li>Sent: {{ progress.sent }}</li>
+    <li>Waiting: {{ progress.waiting }}</li>
+    {% if progress.failed %}<li>Failed: {{ progress.failed }} (check these addresses in Subscribers)</li>{% endif %}
+  </ul>
+  <p>Each newsletter is sent once. To send a correction, copy the page, change it and send the copy.</p>
+{% elif not ready %}
+  <p><strong>Publish the newsletter first</strong>, so that what is emailed matches the web page.</p>
+{% elif not subscribers %}
+  <p>There are no subscribers yet.</p>
+{% else %}
+  <form method="post">{% csrf_token %}
+    <p><label><input type="checkbox" name="confirm" value="1"> Send “{{ page.title }}” to all {{ subscribers }} subscribers. This can't be undone.</label></p>
+    <button class="button" name="action" value="send">Send to {{ subscribers }} subscribers</button>
+  </form>
+{% endif %}
+{% endblock %}

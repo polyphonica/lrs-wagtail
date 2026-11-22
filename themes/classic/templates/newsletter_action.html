@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Newsletter{% endblock %}
+{% block content %}
+{# The links in newsletter emails: confirming a sign-up, and unsubscribing (core/newsletter.py). #}
+<div class="wrap narrow section">
+  {% if step == "confirm" %}
+    <h1>Confirm your subscription</h1>
+    <p>Press the button to receive the Liverpool Renaissance Singers newsletter at {{ email }}.</p>
+    <form method="post">{% csrf_token %}<button class="button" type="submit">Confirm</button></form>
+  {% elif step == "subscribed" %}
+    <h1>Thank you</h1>
+    <p>You're subscribed. The next newsletter will come to {{ subscriber.email }}.</p>
+  {% elif step == "bad-confirm" %}
+    <h1>This link has expired</h1>
+    <p>Confirmation links work for a week. {% if newsletter_page %}Please <a href="{{ newsletter_page.url }}">sign up again</a>.{% endif %}</p>
+  {% elif step == "unsubscribe" %}
+    <h1>Unsubscribe</h1>
+    <p>Press the button to stop receiving the newsletter at {{ email }}.</p>
+    <form method="post">{% csrf_token %}<button class="button" type="submit">Unsubscribe</button></form>
+  {% elif step == "unsubscribed" %}
+    <h1>You're unsubscribed</h1>
+    <p>You won't get any more newsletters from us, and your address has been removed from the list.</p>
+  {% else %}
+    <h1>Not on the list</h1>
+    <p>This address isn't on the newsletter list, so there is nothing to unsubscribe.</p>
+  {% endif %}
+</div>
+{% endblock %}

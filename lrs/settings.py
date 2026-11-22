@@ -154,6 +154,11 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "webmaster@localhost")
 
+# Newsletter: emails sent per run of `send_newsletters` (every minute on the server), and at most per
+# 24 hours. Gmail allows about 500 a day; the rest is kept for password resets and contact messages.
+NEWSLETTER_BATCH = int(env("NEWSLETTER_BATCH", "20"))
+NEWSLETTER_DAILY_LIMIT = int(env("NEWSLETTER_DAILY_LIMIT", "400"))
+
 # --- Security --------------------------------------------------------------
 X_FRAME_OPTIONS = "SAMEORIGIN"  # Wagtail's live preview needs same-origin frames
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"

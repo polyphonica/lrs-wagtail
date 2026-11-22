@@ -1,0 +1,10 @@
+{% autoescape off %}{{ page.title }}
+Liverpool Renaissance Singers
+
+{{ body }}
+
+----
+Read this on the website: {{ web_url }}
+You get this email because you signed up for the Liverpool Renaissance Singers newsletter.
+Unsubscribe: {{ unsubscribe_url }}
+{% endautoescape %}

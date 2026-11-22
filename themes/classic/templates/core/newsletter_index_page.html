@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% load wagtailcore_tags %}
+{% block content %}
+{% include "includes/page_header.html" %}
+<div class="wrap narrow section">
+  {% if step == "check-email" %}
+  <h2>Please check your email</h2>
+  <p>We've sent you a link to confirm your subscription. It may take a few minutes to arrive; if you can't see it, look in your spam folder.</p>
+  {% else %}
+  <h2>Sign up</h2>
+  <form class="form" action="{% pageurl page %}" method="post">{% csrf_token %}
+    {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+    {% include "includes/form_guard.html" %}
+    {% for field in form %}<div class="field">{{ field.label_tag }}{{ field }}{% if field.errors %}<p class="error">{{ field.errors|join:" " }}</p>{% endif %}</div>{% endfor %}
+    <p class="small">We'll email you a link to confirm. Every newsletter has a link to unsubscribe.</p>
+    <div><button class="button" type="submit">Sign up</button></div>
+  </form>
+  {% endif %}
+  {% if newsletters %}
+  <section class="doc-group section">
+    <h2>Past newsletters</h2>
+    <ul class="doc-list">{% for item in newsletters %}
+      <li><a href="{% pageurl item %}">{{ item.title }}</a><span class="doc-meta">{{ item.send.started_at|date:"F Y" }}</span></li>
+    {% endfor %}</ul>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

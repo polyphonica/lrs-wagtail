@@ -1,0 +1,19 @@
+# Sends waiting newsletter emails, one batch per run (started every minute by lrs-newsletter.timer).
+# On the server: /etc/systemd/system/lrs-newsletter.service and .timer, then
+#   systemctl daemon-reload && systemctl enable --now lrs-newsletter.timer
+# A run still going when the next is due is not started twice. Log: journalctl -u lrs-newsletter
+[Unit]
+Description=Send LRS newsletter emails
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=lrs
+Group=lrs
+WorkingDirectory=/var/www/lrs/app
+EnvironmentFile=/var/www/lrs/.env
+ExecStart=/var/www/lrs/venv/bin/python manage.py send_newsletters
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes

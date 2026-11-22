@@ -13,7 +13,7 @@ from django.core.files.images import ImageFile
 from io import BytesIO
 from wagtail.images.models import Image as WagtailImage
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
 from wagtail.blocks.struct_block import StructBlockValidationError
@@ -22,7 +22,9 @@ from wagtail.models import Collection
 from wagtail.rich_text import RichText
 
 from core.blocks import AudioBlock, YouTubeBlock, youtube_id
-from core.models import ConcertIndexPage, ConcertPage, ContactPage, GalleryPage, HomePage
+from core.models import (ConcertIndexPage, ConcertPage, ContactPage, GalleryPage, HomePage, NewsletterIndexPage,
+                         NewsletterPage, NewsletterSend, SiteSettings, Subscriber)
+from core.newsletter import send_pending
 
 TMP_MEDIA = tempfile.mkdtemp()
 
@@ -231,6 +233,91 @@ class SiteTests(TestCase):
         self.assertIn('class="image-text"', html)
         self.assertIn('alt="The choir"', html)
         self.assertIn("About us", html)
+
+    def test_newsletter_signup_and_unsubscribe(self):
+        url = NewsletterIndexPage.objects.get().url
+        self.assertEqual(url, "/newsletters/")  # the old site's address, so no redirect is needed
+        started = self.client.get(url).context["started"]
+
+        def sign_up(email, **extra):
+            with patch("core.models.time.time", return_value=time.time() + 60):
+                return self.client.post(url, {"name": "Ann", "email": email, "started": started, **extra})
+
+        # Bots get the normal reply and nobody is emailed.
+        self.assertContains(sign_up("bot@example.org", website="x"), "Please check your email")
+        self.assertEqual(len(mail.outbox), 0)
+        # A person gets a confirmation link; nobody is stored until it is used.
+        self.assertContains(sign_up("Ann@Example.org"), "Please check your email")
+        self.assertEqual(mail.outbox[0].to, ["ann@example.org"])
+        self.assertFalse(Subscriber.objects.exists())
+        link = next(line for line in mail.outbox[0].body.splitlines() if "/newsletter/confirm/" in line)
+        confirm = urlsplit(link.strip()).path
+        self.assertContains(self.client.get(confirm), "Confirm your subscription")  # opening only shows a button
+        self.assertFalse(Subscriber.objects.exists())
+        self.assertContains(self.client.post(confirm), "subscribed")
+        ann = Subscriber.objects.get()
+        self.assertEqual((ann.email, ann.name, ann.source), ("ann@example.org", "Ann", "form"))
+        # Signing up again sends nothing more; a broken link is refused.
+        sign_up("ann@example.org")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertContains(self.client.get("/newsletter/confirm/forged/"), "expired")
+        # Unsubscribe: the button on the page, or a mail program's one-click post (no CSRF token).
+        from core.newsletter import unsubscribe_url
+        path = urlsplit(unsubscribe_url(ann)).path
+        self.assertContains(self.client.get(path), "ann@example.org")
+        self.assertContains(Client(enforce_csrf_checks=True).post(path, {"List-Unsubscribe": "One-Click"}),
+                            "unsubscribed")
+        self.assertFalse(Subscriber.objects.exists())
+        self.assertContains(self.client.get(path), "Not on the list")
+        # A token can't be reused for someone who later gets the same id.
+        Subscriber.objects.create(pk=ann.pk, email="bob@example.org")
+        self.assertContains(self.client.get(path), "Not on the list")
+
+    @override_settings(NEWSLETTER_DAILY_LIMIT=3, WAGTAILADMIN_BASE_URL="https://choir.example")
+    def test_sending_a_newsletter(self):
+        settings = SiteSettings.for_site(HomePage.objects.get().get_site())
+        settings.contact_email = "choir@example.org"
+        settings.save()
+        for email in ["a@example.org", "b@example.org", "c@example.org", "d@example.org"]:
+            Subscriber.objects.create(email=email)
+        issue = NewsletterIndexPage.objects.get().add_child(instance=NewsletterPage(
+            title="Spring news", body='<p>See <a href="/concerts/">our concerts</a>.</p>'))
+        send_url = f"/admin/newsletter/{issue.id}/send/"
+        # Editors can write newsletters but not send them; sending needs publish rights.
+        self.client.force_login(self.users["Editors"])
+        self.assertRedirects(self.client.get(send_url), "/admin/", fetch_redirect_response=False)  # "no permission"
+        self.client.post(send_url, {"action": "send", "confirm": "1"})
+        self.assertFalse(NewsletterSend.objects.exists())
+        boss = User.objects.create_superuser("boss", "boss@example.org", "pw-12345678")
+        self.client.force_login(boss)
+        self.assertContains(self.client.get(send_url), "Send to 4 subscribers")
+        self.client.post(send_url, {"action": "test"})
+        self.assertEqual(mail.outbox[0].to, ["boss@example.org"])
+        self.client.post(send_url, {"action": "send"})  # without ticking the box
+        self.assertFalse(NewsletterSend.objects.exists())
+        self.client.post(send_url, {"action": "send", "confirm": "1"})
+        self.client.post(send_url, {"action": "send", "confirm": "1"})  # pressed twice: still sent once
+        self.assertEqual(NewsletterSend.objects.get().recipients, 4)
+        # Batches, within the daily limit (3 here); the rest waits for the next day.
+        mail.outbox.clear()
+        self.assertEqual(send_pending(batch=2), 2)
+        self.assertEqual(send_pending(batch=2), 1)
+        self.assertEqual(send_pending(batch=2), 0)
+        message = mail.outbox[0]
+        self.assertEqual((message.subject, message.reply_to), ("Spring news", ["choir@example.org"]))
+        html = message.alternatives[0].content
+        self.assertIn('href="https://choir.example/concerts/"', html)  # links work from an email
+        self.assertIn("our concerts (https://choir.example/concerts/)", message.body)
+        unsubscribe = message.extra_headers["List-Unsubscribe"].strip("<>")
+        self.assertTrue(unsubscribe.startswith("https://choir.example/newsletter/unsubscribe/"))
+        self.assertIn(unsubscribe, html)
+        self.assertEqual(message.extra_headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click")
+        self.assertContains(self.client.get(send_url), "Waiting: 1")
+        # Unsubscribing removes their waiting email; the archive lists sent newsletters.
+        Subscriber.objects.get(email="d@example.org").delete()
+        self.assertContains(self.client.get(send_url), "Waiting: 0")
+        self.assertContains(self.client.get("/newsletters/"), "Spring news")
+        self.assertEqual(self.client.get(issue.url).status_code, 200)
 
     @staticmethod
     def png():

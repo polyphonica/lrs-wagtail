@@ -29,7 +29,7 @@ from wagtail.rich_text import RichText
 
 from core.blocks import TEXT_FEATURES
 from core.models import (Composer, ConcertIndexPage, ConcertPage, ComposersPage, ContactFormField, ContactPage,
-                         DocumentsPage, GalleryPage, GalleryPhoto, HomePage, StandardPage)
+                         DocumentsPage, GalleryPage, GalleryPhoto, HomePage, NewsletterIndexPage, StandardPage)
 
 DOC_PERMS = ["add_document", "change_document", "delete_document", "choose_document"]
 # Old-site photo categories, in gallery order.
@@ -72,6 +72,7 @@ class Command(BaseCommand):
         self.collections = self.setup_collections()
         self.home = self.setup_pages()
         self.gallery = self.setup_gallery()
+        self.setup_newsletter()
         self.setup_redirects()
         if export:
             if not media:
@@ -85,6 +86,11 @@ class Command(BaseCommand):
                   for name in ["Editors", "Moderators", "Committee", "Singers"]}
         access_admin = Permission.objects.get(content_type__app_label="wagtailadmin", codename="access_admin")
         groups["Committee"].permissions.add(access_admin)
+        # Newsletter subscribers: Editors and Moderators manage the list (sending needs publish rights).
+        subscriber_perms = Permission.objects.filter(content_type__app_label="core",
+                                                     content_type__model="subscriber")
+        for name in ["Editors", "Moderators"]:
+            groups[name].permissions.add(*subscriber_perms)
         return groups
 
     def setup_collections(self):
@@ -155,6 +161,14 @@ class Command(BaseCommand):
                 gallery.move(contact, pos="left")
         return gallery
 
+    def setup_newsletter(self):
+        """At the old site's address, /newsletters/. Linked from the footer rather than the menu."""
+        if not NewsletterIndexPage.objects.exists():
+            self.home.add_child(instance=NewsletterIndexPage(
+                title="Newsletter", slug="newsletters",
+                intro="News of our concerts and the choir, a few times a year, by email."))
+        Redirect.objects.filter(old_path="/newsletters", site=None).delete()  # was temporary, to the home page
+
     def setup_redirects(self):
         """Old-site addresses that moved. Per-concert and per-document redirects are made by the import."""
         concerts = ConcertIndexPage.objects.get()
@@ -165,7 +179,7 @@ class Command(BaseCommand):
                  ("/portfolio/", self.gallery, None)]
         for old, page, route in moved:
             self.redirect(old, page, page_route_path=route)
-        for old in ["/calendar/", "/committee-calendar/", "/newsletters/"]:
+        for old in ["/calendar/", "/committee-calendar/"]:
             self.redirect(old, self.home, is_permanent=False)  # temporary until Phase 2 builds these pages
 
     def redirect(self, old_path, target, **kwargs):
