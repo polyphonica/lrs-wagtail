@@ -28,10 +28,16 @@
           <li><a href="{% pageurl item %}"{% if page and item.url_path in page.url_path %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
           {% endfor %}
           {% if user.is_authenticated %}
-          <li><a href="/members/">Members</a></li>
-          <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="linklike">Log out</button></form></li>
+          <li class="account">
+            <button class="linklike account-toggle" type="button" aria-expanded="false" aria-controls="account-menu" hidden>My account</button>
+            <ul class="account-menu" id="account-menu">
+              <li><a href="/members/">Members' documents</a></li>
+              {% if perms.wagtailadmin.access_admin %}<li><a href="{% url 'wagtailadmin_home' %}">Admin</a></li>{% endif %}
+              <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="linklike">Log out</button></form></li>
+            </ul>
+          </li>
           {% else %}
-          <li><a href="{% url 'login' %}">Members' login</a></li>
+          <li><a href="{% url 'login' %}">Log in</a></li>
           {% endif %}
         </ul>
     </nav>

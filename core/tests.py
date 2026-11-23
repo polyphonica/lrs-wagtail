@@ -79,6 +79,30 @@ class SiteTests(TestCase):
         self.client.force_login(self.users["Committee"])
         self.assertIn("Committee doc", self.client.get("/members/").content.decode())
 
+    def test_login_lands_members_on_members_page(self):
+        def login(username, next_url=""):
+            self.client.logout()
+            return self.client.post("/login/" + next_url, {"username": username, "password": "pw-12345678"})
+        self.assertRedirects(login("singers"), "/members/")
+        self.assertRedirects(login("editors"), "/admin/", fetch_redirect_response=False)
+        self.assertRedirects(login("singers", "?next=/concerts/"), "/concerts/")
+
+    def test_admin_logout_goes_to_home_page(self):
+        self.client.force_login(self.users["Editors"])
+        self.assertRedirects(self.client.post("/admin/logout/"), "/")
+        self.assertEqual(self.client.get("/admin/").status_code, 302)  # really signed out
+        self.assertNotContains(self.client.get("/admin/login/"), "logged out")
+
+    def test_header_account_menu(self):
+        self.assertContains(self.client.get("/"), ">Log in<")
+        self.client.force_login(self.users["Singers"])
+        html = self.client.get("/").content.decode()
+        self.assertIn("My account", html)
+        self.assertIn("Members' documents", html)
+        self.assertNotIn('href="/admin/"', html)
+        self.client.force_login(self.users["Editors"])
+        self.assertIn('href="/admin/"', self.client.get("/").content.decode())
+
     def test_upcoming_and_past_concerts(self):
         upcoming = self.client.get("/concerts/").content.decode()
         past = self.client.get("/concerts/past/").content.decode()

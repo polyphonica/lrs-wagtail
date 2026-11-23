@@ -10,6 +10,23 @@ document.addEventListener("DOMContentLoaded", () => {
       toggle.setAttribute("aria-expanded", open);
     });
   }
+  // Signed-in "My account" dropdown (wide screens; on phones its links sit in the menu).
+  const account = document.querySelector(".account-toggle");
+  const accountMenu = document.getElementById("account-menu");
+  if (account && accountMenu) {
+    account.hidden = false;
+    const setOpen = (open) => {
+      accountMenu.classList.toggle("open", open);
+      account.setAttribute("aria-expanded", open);
+    };
+    account.addEventListener("click", () => setOpen(!accountMenu.classList.contains("open")));
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".account")) setOpen(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && accountMenu.classList.contains("open")) { setOpen(false); account.focus(); }
+    });
+  }
   document.querySelectorAll("a.yt[data-yt]").forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();

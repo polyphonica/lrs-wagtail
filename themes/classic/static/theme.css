@@ -63,6 +63,21 @@ h3 { font-size: 1.3rem; }
   .site-nav ul { flex-direction: column; }
 }
 @media (min-width: 52.01rem) { .menu-toggle { display: none; } }
+/* Signed-in menu: a dropdown on wide screens; plain links inside the phone menu (and without JavaScript). */
+.account { position: relative; }
+.account-menu { list-style: none; margin: 0; padding: 0; display: flex; gap: 0.25rem 1.25rem; }
+.account-toggle::after { content: " ▾"; font-size: 0.8em; }
+.account-toggle[aria-expanded="true"] { color: var(--accent); }
+@media (min-width: 52.01rem) {
+  .js .account-menu { display: none; position: absolute; right: 0; top: 100%; min-width: 13rem; margin-top: 0.5rem; padding: 0.4rem 0;
+    flex-direction: column; gap: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
+  .js .account-menu.open { display: flex; }
+  .js .account-menu a, .js .account-menu .linklike { display: block; width: 100%; text-align: left; padding: 0.45rem 1rem; }
+}
+@media (max-width: 52rem) {
+  .account-toggle { display: none; }
+  .account-menu { flex-direction: column; }
+}
 
 /* Hero and page headers */
 .hero, .page-header { position: relative; background: var(--accent); color: var(--accent-ink); overflow: hidden; }
