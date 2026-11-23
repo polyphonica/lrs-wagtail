@@ -1,7 +1,7 @@
 {% load wagtailcore_tags wagtailimages_tags %}
 <article class="concert-card">
   <a href="{% pageurl concert %}" class="concert-card-link">
-    <div class="concert-card-img">{% if concert.image %}{% picture concert.image format-{avif,webp,jpeg} fill-{480x320,960x640} sizes="(min-width: 60rem) 20rem, (min-width: 40rem) 50vw, 100vw" alt="" loading="lazy" %}{% endif %}</div>
+    {% if not no_image %}<div class="concert-card-img">{% if concert.image %}{% picture concert.image format-{avif,webp,jpeg} fill-{480x320,960x640} sizes="(min-width: 60rem) 20rem, (min-width: 40rem) 50vw, 100vw" alt="" loading="lazy" %}{% endif %}</div>{% endif %}
     <div class="concert-card-body">
       <p class="concert-date"><time datetime="{{ concert.date|date:'Y-m-d' }}">{{ concert.date|date:"l j F Y" }}</time>{% if concert.start_time %} · {{ concert.start_time|time:"g.i a" }}{% endif %}</p>
       <h3>{{ concert.title }}</h3>

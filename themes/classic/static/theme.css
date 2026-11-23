@@ -106,8 +106,8 @@ h3 { font-size: 1.3rem; }
 .concert-venue { margin: 0; color: var(--ink-soft); }
 .concert-summary { margin: 0.6rem 0 0; font-size: 0.975rem; }
 /* Home page: smaller cards */
-.concert-grid-compact { grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 17rem)); gap: 1.25rem; }
-.concert-grid-compact .concert-card-img { aspect-ratio: 2 / 1; }
+.concert-grid-compact { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 21rem)); gap: 1.25rem; }  /* wide enough for the longest date and time on one line */
+.concert-grid-compact .concert-card { border-left: 4px solid var(--gold); }  /* no picture: same accent as the link cards */
 .concert-grid-compact .concert-card-body { padding: 0.75rem 0.9rem 0.9rem; font-size: 0.9rem; line-height: 1.5; }
 .concert-grid-compact h3 { font-size: 1.05rem; }
 .concert-grid-compact .concert-date { font-size: 0.8rem; }
