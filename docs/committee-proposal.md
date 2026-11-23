@@ -1,4 +1,4 @@
-<!-- Copy of the Claude Doc https://claude.ai/artifact/BGJZprvzmgP39BeMRMU2gW, exported 2026-11-22.
+<!-- Copy of the Claude Doc https://claude.ai/artifact/BGJZprvzmgP39BeMRMU2gW, exported 2026-11-23.
      The online doc is the master: edit there, then export again. The diagram is only in the online doc. -->
 
 # LRS Website Renewal — Proposal for the Committee
@@ -107,7 +107,7 @@ One caveat: YouTube may show adverts on embedded videos, even on a channel that 
 
 ## Questions for the committee
 
-Eight decisions are open, on two-step login, calendars and the newsletter; work on each waits for the committee's answer. The recommendations are mine; the last column is for the meeting. The background follows the table.
+Twelve decisions are open, on two-step login, calendars, the newsletter and members' contact details; work on each waits for the committee's answer. The recommendations are mine; the last column is for the meeting. The background follows the table.
 
 | # | Question | Recommendation | Decision |
 | --- | --- | --- | --- |
@@ -119,6 +119,10 @@ Eight decisions are open, on two-step login, calendars and the newsletter; work 
 | 6 | Does the choir still send a newsletter? How often, and to roughly how many people? | Facts needed; question 7 depends on them. | |
 | 7 | How should newsletters be sent? | A small list: from the new site through Gmail (free). Otherwise keep the current tool and add a sign-up form to the site. | |
 | 8 | What happens to the 14 newsletters on the old site? | Keep them as an archive in the members' documents. | |
+| 9 | Should members keep their own contact and emergency details up to date on the website, instead of paper forms? | Yes, but later: once every singer has their own login. | |
+| 10 | Which details should be collected? | Name, email, mobile, voice part and an emergency contact. Postal address only if the choir posts things. No medical information. | |
+| 11 | Which committee roles may see members' details, and who is the choir's privacy contact? | Names needed. As few people as possible, e.g. the Secretary and the Chair. | |
+| 12 | How long are a member's details kept after they leave? | 12 months, then deleted automatically. | |
 
 ### Two-step login for admins (questions 1–2)
 
@@ -157,3 +161,31 @@ The right newsletter set-up depends on facts only the committee has: whether new
 Whichever is chosen, every newsletter must offer a one-click unsubscribe, and the list may only hold people who signed up themselves.
 
 The old site holds 14 past newsletters that were not carried over. They could go into the members' documents as an archive, go on the public site, or be left behind.
+
+### Members' contact details (questions 9–12)
+
+Members could keep their own contact and emergency details up to date on the website, replacing the paper forms. This is proposed for later, not for the first version: it needs every singer to have their own login first.
+
+- **My details:** a page where each member sees, changes and saves only their own details, showing when they last did so.
+- **For the committee:** a list in the admin that only the named committee roles can open (not website editors), with a spreadsheet download, e.g. a printable emergency-contacts sheet for rehearsals and concerts.
+- **Email changes** are confirmed by a link before use, because the same address receives password resets and newsletters.
+- **A yearly reminder** asks members to check their details are still right.
+- **Cost:** none; no new service is needed.
+
+The details collected should be only what the choir uses: name, email, mobile, voice part and an emergency contact (name, relationship, phone). Medical information is best left out: health data is "special category" data under UK GDPR and needs a stronger legal basis and extra safeguards. In an emergency, the emergency contact and a 999 call cover it.
+
+**Legal side.** The paper forms already fall under UK GDPR; moving the details online is a good moment to write the rules down.
+
+- **Responsibility:** the choir, as a charity, is the "data controller" and needs a named privacy contact (question 11).
+- **Privacy notice:** a Privacy page saying what is collected and why, who can see it, how long it is kept, and people's rights to see, correct or delete their data and to complain to the ICO. The site needs one anyway for newsletter sign-ups and the contact form, so one page covers all three.
+- **Lawful basis:** probably "legitimate interests": running the choir, and reaching someone's emergency contact if they are taken ill or hurt.
+- **Someone else's data:** an emergency contact is a third party, so the form asks members to check that the person they name is happy to be listed.
+- **Retention:** details are deleted automatically a set time after someone leaves (question 12).
+- **ICO fee:** many small charities are exempt from the data protection fee; the committee should confirm the choir is.
+- **Wording:** the webmaster can draft the privacy notice for the committee to approve; it is standard wording, not legal advice.
+
+**Technical side.**
+
+- **Two-step login (question 1) matters more:** a stolen committee password would otherwise expose members' addresses and emergency contacts.
+- **Backups:** the details sit in the site's database and so in its nightly backups; old backups are deleted on a schedule, so removed details don't linger.
+- **Paper forms** can be shredded once members have entered their details online.
