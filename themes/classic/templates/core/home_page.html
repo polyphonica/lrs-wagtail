@@ -15,5 +15,5 @@
   <div class="concert-grid concert-grid-compact">{% for concert in upcoming %}{% include "includes/concert_card.html" %}{% endfor %}</div>
 </section>
 {% endif %}
-{% if page.body %}<section class="wrap narrow section">{% for block in page.body %}{% include "includes/block.html" %}{% endfor %}</section>{% endif %}
+{% if page.body %}<section class="wrap narrow section{% if upcoming %} section-follow{% endif %}">{% for block in page.body %}{% include "includes/block.html" %}{% endfor %}</section>{% endif %}
 {% endblock %}
