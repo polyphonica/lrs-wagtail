@@ -1,4 +1,4 @@
-// Mobile menu toggle, and YouTube videos that load only when played (faster pages, no tracking until then).
+// Mobile menu toggle, and YouTube videos and maps that load only when played or clicked (faster pages, no tracking until then).
 document.documentElement.classList.add("js");
 document.addEventListener("DOMContentLoaded", () => {
   const toggle = document.querySelector(".menu-toggle");
@@ -27,6 +27,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (event.key === "Escape" && accountMenu.classList.contains("open")) { setOpen(false); account.focus(); }
     });
   }
+  // Google map that loads only when clicked (Google sees nothing until then).
+  document.querySelectorAll("a.map[data-map]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const frame = document.createElement("iframe");
+      frame.src = link.dataset.map;
+      frame.title = "Map of the rehearsal venue";
+      frame.referrerPolicy = "no-referrer-when-downgrade";
+      const box = document.createElement("div");
+      box.className = "map";
+      box.append(frame);
+      link.replaceWith(box);
+    }, { once: true });
+  });
   document.querySelectorAll("a.yt[data-yt]").forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();

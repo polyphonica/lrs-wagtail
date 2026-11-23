@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from django.contrib.auth.models import Group, User
 from django.core import mail
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.images import ImageFile
 from io import BytesIO
@@ -92,6 +93,22 @@ class SiteTests(TestCase):
         self.assertRedirects(self.client.post("/admin/logout/"), "/")
         self.assertEqual(self.client.get("/admin/").status_code, 302)  # really signed out
         self.assertNotContains(self.client.get("/admin/login/"), "logged out")
+
+    def test_contact_page_rehearsal_venue_and_map(self):
+        contact = ContactPage.objects.get()
+        contact.rehearsal_venue = "Liverpool Parish Church\nOld Churchyard\nLiverpool L2 8TZ"
+        contact.map_embed = '<iframe src="https://www.google.com/maps/embed?pb=!1m18&amp;x=1" width="600"></iframe>'
+        contact.full_clean()
+        self.assertEqual(contact.map_embed, "https://www.google.com/maps/embed?pb=!1m18&x=1")
+        contact.save_revision().publish()
+        html = self.client.get(contact.url).content.decode()
+        self.assertIn("Liverpool Parish Church<br>Old Churchyard", html)
+        self.assertIn('data-map="https://www.google.com/maps/embed?pb=!1m18&amp;x=1"', html)
+        self.assertIn("query=Liverpool+Parish+Church%2C+Old+Churchyard%2C+Liverpool+L2+8TZ", html)
+        self.assertNotIn("<iframe", html)  # nothing from Google until a visitor clicks
+        contact.map_embed = "https://example.com/map"
+        with self.assertRaises(ValidationError):
+            contact.full_clean()
 
     def test_header_account_menu(self):
         self.assertContains(self.client.get("/"), ">Log in<")

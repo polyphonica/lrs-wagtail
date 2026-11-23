@@ -3,6 +3,14 @@
 <div class="wrap narrow section">
   <h1>{{ page.title }}</h1>
   {% if page.intro %}<div class="prose">{{ page.intro|richtext }}</div>{% endif %}
+  {% with email=settings.core.SiteSettings.contact_email %}{% if email or page.rehearsal_venue %}
+  <dl class="facts">
+    {% if email %}<div><dt>Email</dt><dd><a href="mailto:{{ email }}">{{ email }}</a></dd></div>{% endif %}
+    {% if page.rehearsal_venue %}<div><dt>Rehearsals</dt><dd>{{ page.rehearsal_venue|linebreaksbr }}<br><a class="small" href="{{ page.maps_link }}">Open in Google Maps</a></dd></div>{% endif %}
+  </dl>{% endif %}{% endwith %}
+  {% if page.map_embed %}<a class="map" href="{{ page.maps_link|default:page.map_embed }}" data-map="{{ page.map_embed }}">
+    <span class="map-label">Show map</span><span class="small">Loads Google Maps</span></a>{% endif %}
+  <h2 class="form-heading">Send us a message</h2>
   <form class="form" action="{% pageurl page %}" method="post">{% csrf_token %}
     {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
     {% include "includes/form_guard.html" %}

@@ -5,10 +5,12 @@ import time
 from html import unescape
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from django.core import signing
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import models
@@ -259,13 +261,23 @@ class ContactFormField(AbstractFormField):
     page = ParentalKey("ContactPage", on_delete=models.CASCADE, related_name="form_fields")
 
 
+MAP_EMBED_PREFIX = "https://www.google.com/maps/embed?"
+
+
 class ContactPage(AbstractEmailForm):
     intro = RichTextField(blank=True, features=TEXT_FEATURES)
+    rehearsal_venue = models.TextField(
+        blank=True, help_text="One address line per line, e.g. the church name, then street, then town and postcode.")
+    map_embed = models.CharField(
+        "Google map", max_length=1000, blank=True,
+        help_text="In Google Maps, find the place, then Share → Embed a map → Copy HTML, and paste it here. "
+                  "Visitors see the map only after clicking it, so Google learns nothing about them until then.")
     thank_you_text = RichTextField(blank=True, features=TEXT_FEATURES)
 
     content_panels = AbstractEmailForm.content_panels + [
         FormSubmissionsPanel(),
         FieldPanel("intro"),
+        MultiFieldPanel([FieldPanel("rehearsal_venue"), FieldPanel("map_embed")], heading="Rehearsals"),
         InlinePanel("form_fields", label="Form fields"),
         FieldPanel("thank_you_text"),
         MultiFieldPanel([FieldRowPanel([FieldPanel("from_address"), FieldPanel("to_address")]),
@@ -274,6 +286,22 @@ class ContactPage(AbstractEmailForm):
     max_count = 1
     subpage_types = []
     guard = FormGuard("lrs.contact")  # the trap box and time stamp are outside the Wagtail form
+
+    def clean(self):
+        super().clean()
+        # Editors paste Google's whole <iframe ...> code; keep only its map address.
+        text = unescape(self.map_embed.strip())
+        found = re.search(r'src="([^"]+)"', text)
+        url = found.group(1) if found else text
+        if url and not url.startswith(MAP_EMBED_PREFIX):
+            raise ValidationError({"map_embed": "Paste the code from Google Maps: Share → Embed a map → Copy HTML."})
+        self.map_embed = url
+
+    @property
+    def maps_link(self):
+        """Opens the venue in Google Maps: the map's fallback without JavaScript, and a link under the address."""
+        address = ", ".join(line.strip() for line in self.rehearsal_venue.splitlines() if line.strip())
+        return f"https://www.google.com/maps/search/?api=1&query={quote_plus(address)}" if address else ""
 
     def get_context(self, request, *args, **kwargs):
         context = super().get_context(request, *args, **kwargs)

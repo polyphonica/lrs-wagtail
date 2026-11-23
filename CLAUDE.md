@@ -49,6 +49,8 @@ Everyone has an individual login: singers, Committee and Editors. No shared acco
 
 - **Login and header** (2026-11-23): one header item: "Log in" when signed out, "My account ▾" when signed in (Members' documents, Admin for anyone with admin access incl. Committee, Log out; plain links in the phone menu). After signing in, singers land on the Members page, admins on the admin dashboard (`LoginView` in `lrs/urls.py`; a `?next=` wins). The admin's own Log out goes to the home page (`AdminLogout`, replaces Wagtail's at `/admin/logout/`, drops Wagtail's "logged out" note).
 
+- **Contact page details** (2026-11-23): above the form, the email from Site settings and the Contact page's "Rehearsals" fields: venue (one line per address line; owner's address: Liverpool Parish Church (Our Lady and Saint Nicholas), Old Churchyard, Liverpool L2 8TZ; the live site's text says 5 Old Churchyard, L2 8GW) and a Google map (editors paste Google's Share → Embed a map code; only its `https://www.google.com/maps/embed?` link is kept). The map loads only on click, like YouTube (`theme.js`); nginx CSP allows `frame-src https://www.google.com/maps/`. Filled locally by a one-off script; on the preview it must be filled the same way, or typed into the page.
+
 ## Next steps (agreed order, 2026-11-21)
 1. ~~Contact-form spam protection~~ (done 2026-11-22).
 2. Two-step login for admins (django-otp). **Parked 2026-11-22: awaiting committee approval.** Proposed plan: required for everyone with admin access (not singers), QR-code setup on first login (adds the `qrcode` package), 10 backup codes, a `manage.py` command to reset a locked-out admin, code page under the nginx login rate limit.
