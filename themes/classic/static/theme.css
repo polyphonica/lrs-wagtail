@@ -151,12 +151,17 @@ h3 { font-size: 1.3rem; }
 figcaption { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.6rem; }
 .gallery-grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); }
 .gallery-grid img { border-radius: 6px; aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
-.image-text { display: grid; gap: var(--gap); align-items: start; margin: 2rem 0; }
-.image-text img { border-radius: var(--radius); width: 100%; }
+/* Picture beside text, on a white panel like the old homepage; slightly smaller text so the two columns
+   come out close in height. */
+.image-text { display: grid; gap: var(--gap); align-items: start; margin: 2rem 0;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: clamp(1rem, 2vw, 1.5rem); }
+.image-text img { border-radius: 6px; width: 100%; }
+.image-text .prose { font-size: 0.95rem; line-height: 1.6; }
+.image-text .prose p { margin-block: 0 0.85em; }
 @media (min-width: 50rem) {
   /* Wider than the text column, like the old homepage: picture and text side by side; link cards. */
   .image-text, .cards { --w: min(calc(var(--wrap) - 2 * var(--gap)), calc(100vw - 4rem)); width: var(--w); margin-inline: calc((100% - var(--w)) / 2); }
-  .image-text { grid-template-columns: 1fr 1fr; }
+  .image-text { --w: min(80rem, calc(100vw - 4rem)); grid-template-columns: 1fr 1fr; }
   .image-text.image-right figure { order: 2; }
 }
 .image-text figure { margin: 0; }
