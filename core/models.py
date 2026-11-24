@@ -175,6 +175,11 @@ class ConcertPage(BasePage):
 
 
 class ComposersPage(BasePage):
+    """Our Music: optional content (e.g. audio samples) above the list of composers."""
+    body = StreamField(PageBody(), blank=True)
+
+    content_panels = BasePage.content_panels + [FieldPanel("body")]
+    search_fields = Page.search_fields + [index.SearchField("intro"), index.SearchField("body")]
     max_count = 1
     subpage_types = []
 

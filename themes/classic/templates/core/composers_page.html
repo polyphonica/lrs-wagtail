@@ -2,6 +2,7 @@
 {% block content %}
 {% include "includes/page_header.html" %}
 <div class="wrap narrow section">
-  <ul class="composer-list">{% for c in composers %}<li><span class="composer-name">{{ c.name }}</span><span class="composer-meta">{{ c.dates }}{% if c.region %} · {{ c.region }}{% endif %}</span></li>{% endfor %}</ul>
+  {% for block in page.body %}{% include "includes/block.html" %}{% endfor %}
+  {% if composers %}<ul class="composer-list">{% for c in composers %}<li><span class="composer-name">{{ c.name }}</span><span class="composer-meta">{{ c.dates }}{% if c.region %} · {{ c.region }}{% endif %}</span></li>{% endfor %}</ul>{% endif %}
 </div>
 {% endblock %}
